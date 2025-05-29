@@ -2,8 +2,11 @@
     "name": "plenatech/adianti_framework",
     "description": "Adianti Framework",
     "type": "library",
-    "license": "https://adiantiframework.com.br/license",
+    "license": "proprietary",
     "homepage": "https://adiantiframework.com.br/",
+    "extra": {
+        "license-url": "https://adiantiframework.com.br/license"
+    },
     "authors": [
         {
             "name": "Pablo Dall'Oglio"
