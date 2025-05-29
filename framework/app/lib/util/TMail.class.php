@@ -15,7 +15,7 @@ class TMail
      */
     function __construct()
     {
-        $this->pm = new PHPMailer;
+        $this->pm = new PHPMailer(true);
         $this->pm-> CharSet = 'utf-8';
     }
     
@@ -32,10 +32,14 @@ class TMail
      * @param  $from = from email
      * @param  $name = from name
      */
-    function setFrom($from, $name)
+    function setFrom($from, $name = null)
     {
         $this->pm-> From     = $from;
-        $this->pm-> FromName = $name;
+        
+        if ($name)
+        {
+            $this->pm-> FromName = $name;
+        }
     }
     
     /**
@@ -125,10 +129,10 @@ class TMail
     /**
      * Set to use Smtp
      */
-    public function SetUseSmtp()
+    public function SetUseSmtp($auth = true)
     {
         $this->pm-> IsSMTP();            // set mailer to use SMTP
-        $this->pm-> SMTPAuth = true;     // turn on SMTP authentication
+        $this->pm-> SMTPAuth = $auth;    // turn on SMTP authentication
     }
     
     /**
@@ -180,10 +184,7 @@ class TMail
      */
     public function send()
     {
-        if (!$this->pm-> Send())
-        {
-            throw new Exception(TAdiantiCoreTranslator::translate('E-mail not sent'));
-        }
+        $this->pm-> Send();
         return TRUE;
     }
 }

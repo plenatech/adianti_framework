@@ -1,6 +1,6 @@
 <?php
 /**
- * Escreve tabelas no formato RTF
+ * Write tables in RTF
  * @author Pablo Dall'Oglio
  */
 class TTableWriterRTF implements ITableWriter
@@ -13,8 +13,8 @@ class TTableWriterRTF implements ITableWriter
     private $widths;
     
     /**
-     * Método construtor
-     * @param $widths vetor contendo as larguras das colunas
+     * Constructor
+     * @param $widths Array with column widths
      */
     public function __construct($widths)
     {
@@ -43,13 +43,21 @@ class TTableWriterRTF implements ITableWriter
     }
     
     /**
-     * Adiciona um novo estilo
-     * @param @stylename nome do estilo
-     * @param @fontface  nome da fonte
-     * @param @fontsize  tamanho da fonte
-     * @param @fontstyle estilo da fonte (B=bold, I=italic)
-     * @param @fontcolor cor da fonte
-     * @param @fillcolor cor de preenchimento
+     * Returns the native writer
+     */
+    public function getNativeWriter()
+    {
+        return $this->rtf;
+    }
+    
+    /**
+     * Add a new style
+     * @param @stylename style name
+     * @param @fontface  font face
+     * @param @fontsize  font size
+     * @param @fontstyle font style (B=bold, I=italic)
+     * @param @fontcolor font color
+     * @param @fillcolor fill color
      */
     public function addStyle($stylename, $fontface, $fontsize, $fontstyle, $fontcolor, $fillcolor)
     {
@@ -65,7 +73,7 @@ class TTableWriterRTF implements ITableWriter
     }
     
     /**
-     * Adiciona uma nova linha na tabela
+     * Add a new row inside the table
      */
     public function addRow()
     {
@@ -75,14 +83,19 @@ class TTableWriterRTF implements ITableWriter
     }
     
     /**
-     * Adiciona uma nova célula na linha atual da tabela
-     * @param $content   conteúdo da célula
-     * @param $align     alinhamento da célula
-     * @param $stylename nome do estilo a ser utilizado
-     * @param $colspan   quantidade de células a serem mescladas 
+     * Add a new cell inside the current row
+     * @param $content   cell content
+     * @param $align     cell align
+     * @param $stylename style to be used
+     * @param $colspan   colspan (merge) 
      */
-    public function addCell($content, $align, $stylename = NULL, $colspan = 1)
+    public function addCell($content, $align, $stylename, $colspan = 1)
     {
+        if (is_null($stylename) OR !isset($this->styles[$stylename]) )
+        {
+            throw new Exception(TAdiantiCoreTranslator::translate('Style ^1 not found in ^2', $stylename, __METHOD__ ) );
+        }
+        
         // obtém a fonte e a cor de preenchimento
         $font      = $this->styles[$stylename]['font'];
         $fillcolor = $this->styles[$stylename]['bgcolor'];
@@ -105,12 +118,12 @@ class TTableWriterRTF implements ITableWriter
             $this->table->mergeCellRange($this->rowcounter, $this->colcounter,
                                          $this->rowcounter, $this->colcounter + $colspan -1);
         }
-        $this->colcounter ++;
+        $this->colcounter += $colspan;
     }
     
     /**
-     * Armazena o conteúdo do documento em um arquivo
-     * @param $filename caminho para o arquivo de saída
+     * Save the current file
+     * @param $filename file name
      */
     public function save($filename)
     {

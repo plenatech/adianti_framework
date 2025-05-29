@@ -1,9 +1,17 @@
+.input-group .form-control:last-child, .input-group .form-control:first-child
+{
+    border-radius: 3px;
+}
+
 .tfield, .inplace_field
 {
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
     border                : solid;
     border-color          : #a0a0a0;
     border-width          : 1px;
-    height                : 20px;
+    height                : 24px;
     z-index               : 1;
     border-radius         : 3px 3px 3px 3px;
     -webkit-border-radius : 3px;
@@ -15,7 +23,10 @@
      -moz-transition: border linear 0.2s, box-shadow linear 0.2s;
        -o-transition: border linear 0.2s, box-shadow linear 0.2s;
           transition: border linear 0.2s, box-shadow linear 0.2s;
+    padding-right: 6px;
+    padding-left: 6px;
 }
+
 .tfield:focus
 {
     border-radius         : 3px 3px 3px 3px;
@@ -30,13 +41,23 @@
 }
 .tfield_disabled
 {
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
     border                : solid;
     border-color          : #a0a0a0;
     border-width          : 1px;
-    height                : 20px;
+    height                : 24px;
     background-color      : #e0e0e0;
-    color                 : #a0a0a0;
+    color                 : #282828;
     border-radius         : 3px 3px 3px 3px;
     -webkit-border-radius : 3px;
     -moz-border-radius    : 3px;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    padding-right: 6px;
+    padding-left: 6px;
 }
