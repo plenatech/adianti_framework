@@ -11,13 +11,14 @@ use Adianti\Database\TSqlInsert;
 use Adianti\Database\TSqlUpdate;
 use Adianti\Database\TSqlDelete;
 
+use Math\Parser;
 use PDO;
 use Exception;
 
 /**
  * Base class for Active Records
  *
- * @version    4.0
+ * @version    5.5
  * @package    database
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
@@ -59,6 +60,18 @@ abstract class TRecord
                 throw new Exception(AdiantiCoreTranslator::translate('Object ^1 not found in ^2', $id, constant(get_class($this).'::TABLENAME')));
             }
         }
+    }
+    
+    /**
+     * Create a new TRecord and returns the instance
+     * @param $data indexed array
+     */
+    public static function create($data)
+    {
+        $object = new static;
+        $object->fromArray($data);
+        $object->store();
+        return $object;
     }
     
     /**
@@ -307,11 +320,13 @@ abstract class TRecord
                     $this->data[$key] = $data[$key];
                 }
             }
-
         }
         else
         {
-            $this->data = $data;
+            foreach ($data as $key => $value)
+            {
+                $this->data[$key] = $data[$key];
+            }
         }
     }
     
@@ -353,6 +368,50 @@ abstract class TRecord
     }
     
     /**
+     * Render variables inside brackets
+     */
+    public function render($pattern, $cast = null)
+    {
+        $content = $pattern;
+        if (preg_match_all('/\{(.*?)\}/', $pattern, $matches) )
+        {
+            foreach ($matches[0] as $match)
+            {
+                $property = substr($match, 1, -1);
+                if (substr($property, 0, 1) == '$')
+                {
+                    $property = substr($property, 1);
+                }
+                $value = $this->$property;
+                if ($cast)
+                {
+                    settype($value, $cast);
+                }
+                $content  = str_replace($match, $value, $content);
+            }
+        }
+        
+        return $content;
+    }
+    
+    /**
+     * Evaluate variables inside brackets
+     */
+    public function evaluate($pattern)
+    {
+        $content = $this->render($pattern, 'float');
+        $content = str_replace('+', ' + ', $content);
+        $content = str_replace('-', ' - ', $content);
+        $content = str_replace('*', ' * ', $content);
+        $content = str_replace('/', ' / ', $content);
+        $content = str_replace('(', ' ( ', $content);
+        $content = str_replace(')', ' ) ', $content);
+        $parser = new Parser;
+        $content = $parser->evaluate(substr($content,1));
+        return $content;
+    }
+    
+    /**
      * Register an persisted attribute
      */
     public function addAttribute($attribute)
@@ -371,6 +430,21 @@ abstract class TRecord
     public function getAttributes()
     {
         return $this->attributes;
+    }
+    
+    /**
+     * Get attribute list
+     */
+    public function getAttributeList()
+    {
+        if (count($this->attributes) > 0)
+        {
+            $attributes = $this->attributes;
+            $attributes[] = $this->getPrimaryKey();
+            return implode(',', $attributes);
+        }
+        
+        return '*';
     }
     
     /**
@@ -536,7 +610,7 @@ abstract class TRecord
         // creates a SELECT instruction
         $sql = new TSqlSelect;
         $sql->setEntity($this->getEntity());
-        $sql->addColumn('*');
+        $sql->addColumn($this->getAttributeList());
         
         // creates a select criteria based on the ID
         $criteria = new TCriteria;
@@ -624,7 +698,8 @@ abstract class TRecord
         // creates a SELECT instruction
         $sql = new TSqlSelect;
         $sql->setEntity($this->getEntity());
-        $sql->addColumn('*');
+        // use *, once this is called before addAttribute()s
+        $sql->addColumn($this->getAttributeList());
         
         // creates a select criteria based on the ID
         $criteria = new TCriteria;
@@ -652,25 +727,20 @@ abstract class TRecord
             // if there's a result
             if ($result)
             {
-                if (method_exists($this, 'onAfterLoad'))
+                $activeClass = get_class($this);
+                $fetched_object = $result-> fetchObject();
+                if ($fetched_object)
                 {
-                    $fetched_object = $result-> fetchObject();
-                    if ($fetched_object)
+                    if (method_exists($this, 'onAfterLoad'))
                     {
                         $this->onAfterLoad($fetched_object);
-                        $activeClass = get_class($this);
-                        $object = new $activeClass;
-                        $object->fromArray( (array) $fetched_object );
                     }
-                    else
-                    {
-                        $object = NULL;
-                    }
+                    $object = new $activeClass;
+                    $object->fromArray( (array) $fetched_object );
                 }
                 else
                 {
-                    // returns the data as an object of this class
-                    $object = $result-> fetchObject(get_class($this));
+                    $object = NULL;
                 }
                 
                 if ($object)
@@ -877,36 +947,40 @@ abstract class TRecord
      */
     public function loadComposite($composite_class, $foreign_key, $id = NULL, $order = NULL)
     {
-        // discover the primary key name
-        $pk = $this->getPrimaryKey();
-        // if the user has not passed the ID, take the object ID
-        $id = $id ? $id : $this->$pk;
-
-        $criteria = new TCriteria;
-        $criteria->add(new TFilter($foreign_key, '=', $id));
-        if ($order)
-        {
-            $criteria->setProperty('order', $order);
-        }
-        
+        $pk = $this->getPrimaryKey(); // discover the primary key name
+        $id = $id ? $id : $this->$pk; // if the user has not passed the ID, take the object ID
+        $criteria = TCriteria::create( [$foreign_key => $id ], ['order' => $order] );
         $repository = new TRepository($composite_class);
-        $objects = $repository->load($criteria);
-        return $objects;
+        return $repository->load($criteria);
     }
-
+    
     /**
      * Load composite objects. Shortcut for loadComposite
      * @param $composite_class Active Record Class for composite objects
      * @param $foreign_key Foreign key in composite objects
-     * @param $local_id Primary key of parent object
+     * @param $primary_key Primary key of parent object
      * @returns Array of Active Records
      */
-    public function hasMany($composite_class, $foreign_key = NULL, $local_id = NULL, $order = NULL)
+    public function hasMany($composite_class, $foreign_key = NULL, $primary_key = NULL, $order = NULL)
     {
-        $class = get_class($this);
-        $foreign_key = isset($foreign_key) ? $foreign_key : $this->underscoreFromCamelCase($class) . '_id';
-        $local_id = $local_id ? $local_id : $this->getPrimaryKey();
-        return $this->loadComposite($composite_class, $foreign_key, $this->$local_id, $order);
+        $foreign_key = isset($foreign_key) ? $foreign_key : $this->underscoreFromCamelCase(get_class($this)) . '_id';
+        $primary_key = $primary_key ? $primary_key : $this->getPrimaryKey();
+        return $this->loadComposite($composite_class, $foreign_key, $this->$primary_key, $order);
+    }
+    
+    /**
+     * Create a criteria to load composite objects
+     * @param $composite_class Active Record Class for composite objects
+     * @param $foreign_key Foreign key in composite objects
+     * @param $primary_key Primary key of parent object
+     * @returns TRepository instance
+     */
+    public function filterMany($composite_class, $foreign_key = NULL, $primary_key = NULL, $order = NULL)
+    {
+        $foreign_key = isset($foreign_key) ? $foreign_key : $this->underscoreFromCamelCase(get_class($this)) . '_id';
+        $primary_key = $primary_key ? $primary_key : $this->getPrimaryKey();
+        $criteria = TCriteria::create( [$foreign_key => $this->$primary_key ], ['order' => $order] );
+        return new TRepository($composite_class);
     }
     
     /**
@@ -915,13 +989,13 @@ abstract class TRecord
      * @param $foreign_key Foreign key in composite objects
      * @param $id Primary key of parent object
      */
-    public function deleteComposite($composite_class, $foreign_key, $id)
+    public function deleteComposite($composite_class, $foreign_key, $id, $callObjectLoad = FALSE)
     {
         $criteria = new TCriteria;
         $criteria->add(new TFilter($foreign_key, '=', $id));
         
         $repository = new TRepository($composite_class);
-        return $repository->delete($criteria);
+        return $repository->delete($criteria, $callObjectLoad);
     }
     
     /**
@@ -931,9 +1005,9 @@ abstract class TRecord
      * @param $id Primary key of parent object
      * @param $objects Array of Active Records to be saved
      */
-    public function saveComposite($composite_class, $foreign_key, $id, $objects)
+    public function saveComposite($composite_class, $foreign_key, $id, $objects, $callObjectLoad = FALSE)
     {
-        $this->deleteComposite($composite_class, $foreign_key, $id);
+        $this->deleteComposite($composite_class, $foreign_key, $id, $callObjectLoad);
         
         if ($objects)
         {
@@ -984,7 +1058,6 @@ abstract class TRecord
      * @param $join_class Active Record Join Class (Parent / Aggregated)
      * @param $foreign_key_parent Foreign key in Join Class to parent object
      * @param $foreign_key_child Foreign key in Join Class to child object
-     * @param $id Primary key of parent object
      * @returns Array of Active Records
      */
     public function belongsToMany($aggregate_class, $join_class = NULL, $foreign_key_parent = NULL, $foreign_key_child = NULL)
@@ -1022,6 +1095,28 @@ abstract class TRecord
     }
     
     /**
+     * Returns the first object
+     */
+    public static function first()
+    {
+        $object = new static;
+        $id = $object->getFirstID();
+        
+        return self::find($id);
+    }
+    
+    /**
+     * Returns the last object
+     */
+    public static function last()
+    {
+        $object = new static;
+        $id = $object->getLastID();
+        
+        return self::find($id);
+    }
+    
+    /**
      * Find a Active Record and returns it
      * @return The Active Record itself or NULL when not found
      */
@@ -1054,18 +1149,45 @@ abstract class TRecord
      */
     public static function getIndexedArray($indexColumn, $valueColumn, $criteria = NULL)
     {
+        $sort_array = false;
+        
+        if (empty($criteria))
+        {
+            $criteria = new TCriteria;
+            $sort_array = true;
+        }
+        
         $indexedArray = array();
         $class = get_called_class(); // get the Active Record class name
         $repository = new TRepository( $class ); // create the repository
-        $objects = $repository->load($criteria);
+        $objects = $repository->load($criteria, FALSE);
         if ($objects)
         {
             foreach ($objects as $object)
             {
-                $indexedArray[ $object->$indexColumn ] = $object->$valueColumn;
+                $key = (isset($object->$indexColumn)) ? $object->$indexColumn : $object->render($indexColumn);
+                $val = (isset($object->$valueColumn)) ? $object->$valueColumn : $object->render($valueColumn);
+                
+                $indexedArray[ $key ] = $val;
             }
         }
+        
+        if ($sort_array)
+        {
+            asort($indexedArray);
+        }
         return $indexedArray;
+    }
+    
+    /**
+     * Creates a Repository with filter
+     * @returns the TRepository object with a filter
+     */
+    public static function select()
+    {
+        $class = get_called_class(); // get the Active Record class name
+        $repository = new TRepository( $class ); // create the repository
+        return $repository->select( func_get_args() );
     }
     
     /**

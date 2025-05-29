@@ -1,64 +1,121 @@
-function tform_send_data(form_name, field, value, fire_events) {
-    try{
-        if ($('form[name='+form_name+'] [name='+field+']').length || $("form[name="+form_name+"] [name='"+field+"[]']").length)
+function tform_send_data(form_name, field, value, fire_events)
+{
+    try {
+        if (field.substr(0,1) == '#')
         {
-            if (typeof Adianti.formEventsCounter == 'undefined') {
+            var single_field = $(field);
+            var array_field  = [];
+        }
+        else
+        {
+            var single_field = $("form[name="+form_name+"] [name='"+field+"']");
+            var array_field  = $("form[name="+form_name+"] [name='"+field+"[]']");
+        }
+        
+        if (single_field.length || array_field.length) {
+            if (typeof Adianti.formEventsCounter == 'undefined' || Number.isNaN(Adianti.formEventsCounter)) {
                 Adianti.formEventsCounter = 0;
             }
             
             if (Adianti.formEventsCounter == 0 ) {
-                if ($('form[name='+form_name+'] [name='+field+']').length)
-                {
-                    if ($('form[name='+form_name+'] [name='+field+']').attr('class') == 'thtmleditor') {
-                        $('form[name='+form_name+'] [name='+field+']').code( value );
+                if (single_field.length) {
+                    if (single_field.attr('widget') == 'thtmleditor') {
+                        single_field.summernote( "code", value );
                     }
-                    else if ($('form[name='+form_name+'] [name='+field+']').attr('type') == 'radio') {
+                    else if (single_field.attr('role') == 'tcombosearch') {
+                        // only when is different to avoid extra asynchronous event calls on hierarchical combos
+                        if (single_field.val() !== value) {
+                            single_field.select2().val(value).trigger('change.select2');
+                        }
+                    }
+                    else if (single_field.attr('widget') == 'tdbuniquesearch') {
+                        tdbuniquesearch_set_value(form_name, field, value);
+                    }
+                    else if (single_field.attr('component') == 'multisearch') {
                         if (value) {
-                            $('form[name='+form_name+'] [name='+field+']').filter('[value='+value+']').prop('checked', true);
+                            single_field.select2().val(value).trigger('change.select2');
+                        }
+                    }
+                    else if (single_field.attr('type') == 'radio') {
+                        if (value) {
+                            var radio_input = single_field.filter('[value='+value+']').prop('checked', true);
+                            if (radio_input.parent().prop('tagName') == 'LABEL') {
+                                radio_input.parent().parent().find('label').removeClass('active');
+                                radio_input.parent().toggleClass('active');
+                            }
                         }
                     }
                     else {
-                        $('form[name='+form_name+'] [name='+field+']').val( value );
+                        single_field.val( value );
                     }
                     
                     if (fire_events) { 
-                        if ($('form[name='+form_name+'] [name='+field+']').attr('exitaction')) {
-                            tform_events_hang_exec( $('form[name='+form_name+'] [name='+field+']').attr('exitaction') );
+                        if (single_field.attr('exitaction')) {
+                            tform_events_hang_exec( single_field.attr('exitaction') );
                         }
-                        if ($('form[name='+form_name+'] [name='+field+']').attr('changeaction')) {
-                            tform_events_hang_exec( $('form[name='+form_name+'] [name='+field+']').attr('changeaction') );
+                        if (single_field.attr('changeaction')) {
+                            tform_events_hang_exec( single_field.attr('changeaction') );
                         }
                     }
                 }
-                else if ($("form[name="+form_name+"] [name='"+field+"[]']").length)
+                else if (array_field.length)
                 {
-                    if ($("form[name="+form_name+"] [name='"+field+"[]']").attr('type') == 'checkbox') {
-                        $("form[name="+form_name+"] [name='"+field+"[]']").prop('checked', false);
+                    if (array_field.attr('type') == 'checkbox') {
+                        array_field.prop('checked', false);
                         
                         if (value) {
-                            var checkeds = value.split(',');
+                            array_field.parent().parent().find('label').removeClass('active');
+                            var checkeds = value.split('|');
                             $.each(checkeds, function(key, checkvalue) {
-                                $("form[name="+form_name+"] [name='"+field+"[]']").filter('[value='+checkvalue+']').prop('checked', true);
-                            } );
+                                var check_input = array_field.filter('[value='+checkvalue+']').prop('checked', true);
+                                if (check_input.parent().prop('tagName') == 'LABEL') {
+                                    check_input.parent().toggleClass('active');
+                                }
+                            });
                         }
                     }
-                    else if ($("form[name="+form_name+"] select[name='"+field+"[]']").length)
-                    {
+                    else if (array_field.attr('component') == 'multientry') {
                         if (value) {
-                            var checkeds = value.split(',');
-                            $("form[name="+form_name+"] select[name='"+field+"[]'] option").prop('selected', false);
-                            $.each(checkeds, function(key, checkvalue) {
-                                $("form[name="+form_name+"] select[name='"+field+"[]'] option").filter('[value='+checkvalue+']').prop('selected', true);
-                            } );
+                            array_field.empty();
+                            var values = value.split('|');
+                            $.each(values, function(key, value) {
+                                array_field.append($("<option/>").val(value).text(value));
+                            });
+                            array_field.val(values).trigger("change.select2");
+                        }
+                    }
+                    else if (array_field.attr('component') == 'multisearch') {
+                        if (value) {
+                            var values = value.split('|');
+                            array_field.select2().val(values).trigger('change.select2');
+                        }
+                    }
+                    else if (array_field.length) {
+                        if (value) {
+                            var values = value.split('|');
+                            $(array_field).find("option").prop('selected', false);
+                            if (array_field.attr('widget') == 'tselect' && array_field.length == 1) // single select[]
+                            {
+                                $.each(values, function(key, checkvalue) {
+                                    $(array_field).find("option").filter('[value='+checkvalue+']').prop('selected', true);
+                                } );
+                            }
+                            else // array of inputs (tfieldlist)
+                            {
+                                $.each(values, function(key, each_value) {
+                                    var field_id = $($(array_field)[key]).attr('id');
+                                    tform_send_data(form_name, '#'+field_id, each_value, fire_events);
+                                } );
+                            }
                         }
                     }
                     
                     if (fire_events) { 
-                        if ($("form[name="+form_name+"] [name='"+field+"[]']").attr('exitaction')) {
-                            tform_events_hang_exec( $("form[name="+form_name+"] [name='"+field+"[]']").attr('exitaction') );
+                        if (array_field.attr('exitaction')) {
+                            tform_events_hang_exec( array_field.attr('exitaction') );
                         }
-                        if ($("form[name="+form_name+"] [name='"+field+"[]']").attr('changeaction')) {
-                            tform_events_hang_exec( $("form[name="+form_name+"] [name='"+field+"[]']").attr('changeaction') );
+                        if (array_field.attr('changeaction')) {
+                            tform_events_hang_exec( array_field.attr('changeaction') );
                         }
                     }
                 }
@@ -69,7 +126,9 @@ function tform_send_data(form_name, field, value, fire_events) {
                 });
             }
         }
-    } catch (e) { }
+    } catch (e) {
+        console.log(e);
+    }
 }
 
 function tform_send_data_by_id(form_name, field, value, fire_events) {
@@ -96,7 +155,9 @@ function tform_send_data_by_id(form_name, field, value, fire_events) {
                 });
             }
         }
-    } catch (e) { }
+    } catch (e) {
+        console.log(e);
+    }
 }
 
 function tform_events_hang_exec( string_callback )
@@ -139,14 +200,25 @@ function tform_send_data_aggregate(form_name, field, value, fire_events) {
     try {
         if ($('form[name='+form_name+'] [name='+field+']').val() == '')
         {
-            tform_send_data(form_name, field, value, fire_events);
+            $('form[name='+form_name+'] [name='+field+']').val( value );
         }
         else
         {
             current_value = $('form[name='+form_name+'] [name='+field+']').val();
             $('form[name='+form_name+'] [name='+field+']').val( current_value + ', '+ value );
         }
-    } catch (e) { }
+    } catch (e) {
+        console.log(e);
+    }
+}
+
+function tform_fire_field_actions(form_name, field) { 
+    if ($('form[name='+form_name+'] [name='+field+']').attr('exitaction')) {
+        tform_events_hang_exec( $('form[name='+form_name+'] [name='+field+']').attr('exitaction') );
+    }
+    if ($('form[name='+form_name+'] [name='+field+']').attr('changeaction')) {
+        tform_events_hang_exec( $('form[name='+form_name+'] [name='+field+']').attr('changeaction') );
+    }
 }
 
 function tform_hide_field(form, field) {

@@ -15,7 +15,7 @@ use Exception;
 /**
  * DataGrid Widget: Allows to create datagrids with rows, columns and actions
  *
- * @version    4.0
+ * @version    5.5
  * @package    widget
  * @subpackage datagrid
  * @author     Pablo Dall'Oglio
@@ -62,11 +62,19 @@ class TDataGrid extends TTable
         $this->groupCount = 0;
         $this->actions = array();
         $this->action_groups = array();
-        $this->actionWidth = '16px';
+        $this->actionWidth = '28px';
         $this->objects = array();
         $this->columnValues = array();
         $this->{'class'} = 'tdatagrid_table';
         $this->{'id'}    = 'tdatagrid_' . mt_rand(1000000000, 1999999999);
+    }
+    
+    /**
+     * Set id
+     */
+    public function setId($id)
+    {
+        $this->{'id'} = $id;
     }
     
     /**
@@ -87,10 +95,27 @@ class TDataGrid extends TTable
     public function makeScrollable()
     {
         $this->scrollable = TRUE;
+        
         if (isset($this->thead))
         {
             $this->thead->style = 'display: block';
         }
+    }
+    
+    /**
+     * Returns if datagrid is scrollable
+     */
+    public function isScrollable()
+    {
+        return $this->scrollable;
+    }
+    
+    /**
+     * Returns true if has custom width
+     */
+    private function hasCustomWidth()
+    {
+        return ( (strpos($this->getProperty('style'), 'width') !== false) OR !empty($this->getProperty('width')));
     }
     
     /**
@@ -146,11 +171,11 @@ class TDataGrid extends TTable
      * Add an Action to the DataGrid
      * @param $object A TDataGridAction object
      */
-    public function addAction(TDataGridAction $object)
+    public function addAction(TDataGridAction $action)
     {
-        if (!$object->getField())
+        if (!$action->fieldDefined())
         {
-            throw new Exception(AdiantiCoreTranslator::translate('You must define the field for the action (^1)', $object->toString()) );
+            throw new Exception(AdiantiCoreTranslator::translate('You must define the field for the action (^1)', $action->toString()) );
         }
         
         if ($this->modelCreated)
@@ -159,7 +184,7 @@ class TDataGrid extends TTable
         }
         else
         {
-            $this->actions[] = $object;
+            $this->actions[] = $action;
         }
     }
     
@@ -179,6 +204,17 @@ class TDataGrid extends TTable
         }
     }
     
+    /**
+     * Returns the total columns
+     */
+    public function getTotalColumns()
+    {
+        return count($this->columns) + count($this->actions) + count($this->action_groups);
+    }
+    
+    /**
+     * Set the group column for break
+     */
     public function setGroupColumn($column, $mask)
     {
         $this->groupColumn = $column;
@@ -220,119 +256,129 @@ class TDataGrid extends TTable
             $this->rowcount = 0;
             $this->objects = array();
             $this->columnValues = array();
+            $this->groupContent = NULL;
         }
     }
     
     /**
      * Creates the DataGrid Structure
      */
-    public function createModel()
+    public function createModel( $create_header = true )
     {
         if (!$this->columns)
         {
             return;
         }
         
-        $this->thead = new TElement('thead');
-        $this->thead->{'class'} = 'tdatagrid_head';
-        parent::add($this->thead);
-        
-        $row = new TElement('tr');
-        if ($this->scrollable)
+        if ($create_header)
         {
-            $this->thead->{'style'} = 'display:block';
-        }
-        $this->thead->add($row);
-        
-        $actions_count = count($this->actions) + count($this->action_groups);
-        
-        if ($actions_count >0)
-        {
-            for ($n=0; $n < $actions_count; $n++)
+            $this->thead = new TElement('thead');
+            $this->thead->{'class'} = 'tdatagrid_head';
+            parent::add($this->thead);
+            
+            $row = new TElement('tr');
+            if ($this->scrollable)
             {
-                $cell = new TElement('th');
-                $row->add($cell);
-                $cell->add('&nbsp;');
-                $cell->{'class'} = 'tdatagrid_action';
-                $cell-> width = $this->actionWidth;
+                $this->thead->{'style'} = 'display:block';
+                if ($this->hasCustomWidth())
+                {
+                    $row->{'style'} = 'display: inline-table; width: 100%';
+                }
+            }
+            $this->thead->add($row);
+            
+            $actions_count = count($this->actions) + count($this->action_groups);
+            
+            if ($actions_count >0)
+            {
+                for ($n=0; $n < $actions_count; $n++)
+                {
+                    $cell = new TElement('th');
+                    $row->add($cell);
+                    $cell->add('<span style="width:calc('.$this->actionWidth.' - 2px);display:block"></span>');
+                    $cell->{'class'} = 'tdatagrid_action';
+                    $cell->{'style'} = 'padding:0';
+                    $cell->{'width'} = $this->actionWidth;
+                }
+                
+                $cell->{'class'} = 'tdatagrid_col';
             }
             
-            $cell->{'class'} = 'tdatagrid_col';
-        }
-        
-        // add some cells for the data
-        if ($this->columns)
-        {
-            // iterate the DataGrid columns
-            foreach ($this->columns as $column)
+            // add some cells for the data
+            if ($this->columns)
             {
-                // get the column properties
-                $name  = $column->getName();
-                $label = '&nbsp;'.$column->getLabel().'&nbsp;';
-                $align = $column->getAlign();
-                $width = $column->getWidth();
-                $props = $column->getProperties();
-                
-                if (isset($_GET['order']))
+                // iterate the DataGrid columns
+                foreach ($this->columns as $column)
                 {
-                    if ($_GET['order'] == $name)
+                    // get the column properties
+                    $name  = $column->getName();
+                    $label = '&nbsp;'.$column->getLabel().'&nbsp;';
+                    $align = $column->getAlign();
+                    $width = $column->getWidth();
+                    $props = $column->getProperties();
+                    
+                    if (isset($_GET['order']))
                     {
-                        if (isset($_GET['direction']) AND $_GET['direction'] == 'asc')
+                        if ($_GET['order'] == $name)
                         {
-                            $label .= '<span class="glyphicon glyphicon-chevron-down blue" aria-hidden="true"></span>';
+                            if (isset($_GET['direction']) AND $_GET['direction'] == 'asc')
+                            {
+                                $label .= '<span class="glyphicon glyphicon-chevron-down blue" aria-hidden="true"></span>';
+                            }
+                            else
+                            {
+                                $label .= '<span class="glyphicon glyphicon-chevron-up blue" aria-hidden="true"></span>';
+                            }
+                        }
+                    }
+                    // add a cell with the columns label
+                    $cell = new TElement('th');
+                    $row->add($cell);
+                    $cell->add($label);
+                    
+                    $cell->{'class'} = 'tdatagrid_col';
+                    $cell->{'style'} = "text-align:$align;user-select:none";
+                    
+                    if ($props)
+                    {
+                        foreach ($props as $prop_name => $prop_value)
+                        {
+                            $cell->$prop_name = $prop_value;
+                        }
+                    }
+                    
+                    if ($width)
+                    {
+                        $cell->{'width'} = (strpos($width, '%') !== false || strpos($width, 'px') !== false) ? $width : ($width + 8).'px';
+                    }
+                    
+                    // verify if the column has an attached action
+                    if ($column->getAction())
+                    {
+                        $action = $column->getAction();
+                        if (isset($_GET['direction']) AND $_GET['direction'] == 'asc' AND isset($_GET['order']) AND ($_GET['order'] == $name))
+                        {
+                            $action->setParameter('direction', 'desc');
                         }
                         else
                         {
-                            $label .= '<span class="glyphicon glyphicon-chevron-up blue" aria-hidden="true"></span>';
+                            $action->setParameter('direction', 'asc');
                         }
+                        $url    = $action->serialize();
+                        $cell->{'href'}        = $url;
+                        $cell->{'style'}      .= ";cursor:pointer;";
+                        $cell->{'generator'}   = 'adianti';
                     }
                 }
-                // add a cell with the columns label
-                $cell = new TElement('th');
-                $row->add($cell);
-                $cell->add($label);
                 
-                $cell->{'class'} = 'tdatagrid_col';
-                $cell->{'style'} = "text-align:$align";
-                
-                if ($props)
+                if ($this->scrollable)
                 {
-                    foreach ($props as $prop_name => $prop_value)
-                    {
-                        $cell->$prop_name = $prop_value;
-                    }
+                    $cell = new TElement('td');
+                    $cell->{'class'} = 'tdatagrid_col';
+                    $row->add($cell);
+                    $cell->add('<span style="width:20px;display:block"></span>');
+                    $cell->{'style'} = 'padding:0';
                 }
-                
-                if ($width)
-                {
-                    $cell->{'width'} = (strpos($width, '%') !== false) ? $width : ($width + 8).'px';
-                }
-                
-                // verify if the column has an attached action
-                if ($column->getAction())
-                {
-                    $action = $column->getAction();
-                    if (isset($_GET['direction']) AND $_GET['direction'] == 'asc' AND isset($_GET['order']) AND ($_GET['order'] == $name))
-                    {
-                        $action->setParameter('direction', 'desc');
-                    }
-                    else
-                    {
-                        $action->setParameter('direction', 'asc');
-                    }
-                    $url    = $action->serialize();
-                    $cell-> href        = $url;
-                    $cell-> generator   = 'adianti';
-                }
-            }
-            
-            if ($this->scrollable)
-            {
-                $cell = new TElement('td');
-                $cell->{'class'} = 'tdatagrid_col';
-                $row->add($cell);
-                $cell->add('&nbsp;');
-                $cell-> width = '12px';
             }
         }
         
@@ -346,6 +392,22 @@ class TDataGrid extends TTable
         parent::add($this->tbody);
         
         $this->modelCreated = TRUE;
+    }
+    
+    /**
+     * Return thead
+     */
+    public function getHead()
+    {
+        return $this->thead;
+    }
+    
+    /**
+     * Return tbody
+     */
+    public function getBody()
+    {
+        return $this->tbody;
     }
     
     /**
@@ -386,7 +448,10 @@ class TDataGrid extends TTable
                 $row->{'class'} = 'tdatagrid_group';
                 $row->{'level'} = ++ $this->groupCount;
                 $this->groupRowCount = 0;
-                
+                if ($this->isScrollable() AND $this->hasCustomWidth())
+                {
+                    $row->{'style'} = 'display: inline-table; width: 100%';
+                }
                 $this->tbody->add($row);
                 $cell = new TElement('td');
                 $cell->add( $this->replace($this->groupMask, $object) );
@@ -402,6 +467,11 @@ class TDataGrid extends TTable
             $this->tbody->add($row);
             $row->{'class'} = $classname;
             
+            if ($this->isScrollable() AND $this->hasCustomWidth())
+            {
+                $row->{'style'} = 'display: inline-table; width: 100%';
+            }
+            
             if ($this->groupColumn)
             {
                 $this->groupRowCount ++;
@@ -412,9 +482,10 @@ class TDataGrid extends TTable
             if ($this->actions)
             {
                 // iterate the actions
-                foreach ($this->actions as $action)
+                foreach ($this->actions as $action_template)
                 {
-                    $this->prepareAction($action, $object); // validate action
+                    // validate, clone, and inject object parameters
+                    $action = $action_template->prepare($object);
                     
                     // get the action properties
                     $label     = $action->getLabel();
@@ -434,7 +505,7 @@ class TDataGrid extends TTable
                         // verify if the link will have an icon or a label
                         if ($image)
                         {
-                            $image_tag = new TImage($image);
+                            $image_tag = is_object($image) ? clone $image : new TImage($image);
                             $image_tag->{'title'} = $label;
                             
                             if ($action->getUseButton())
@@ -486,8 +557,10 @@ class TDataGrid extends TTable
                     {
                         $dropdown = new TDropDown($action_group->getLabel(), $action_group->getIcon());
                         $last_index = 0;
-                        foreach ($actions as $index => $action)
+                        foreach ($actions as $index => $action_template)
                         {
+                            $action = $action_template->prepare($object);
+                            
                             // add intermediate headers and separators
                             for ($n=$last_index; $n<$index; $n++)
                             {
@@ -500,6 +573,7 @@ class TDataGrid extends TTable
                                     $dropdown->addSeparator();
                                 }
                             }
+                            
                             // get the action properties
                             $label  = $action->getLabel();
                             $image  = $action->getImage();
@@ -507,8 +581,7 @@ class TDataGrid extends TTable
                             
                             if (empty($condition) OR call_user_func($condition, $object))
                             {
-                                $this->prepareAction($action, $object); // validate action
-                                $url    = $action->serialize();
+                                $url       = $action->serialize();
                                 $first_url = isset($first_url) ? $first_url : $url;
                                 $dropdown->addAction($label, $action, $image);
                             }
@@ -533,11 +606,18 @@ class TDataGrid extends TTable
                     $align    = $column->getAlign();
                     $width    = $column->getWidth();
                     $function = $column->getTransformer();
+                    $props    = $column->getDataProperties();
                     
                     // calculated column
                     if (substr($name,0,1) == '=')
                     {
                         $content = $this->replace($name, $object, 'float');
+                        $content = str_replace('+', ' + ', $content);
+                        $content = str_replace('-', ' - ', $content);
+                        $content = str_replace('*', ' * ', $content);
+                        $content = str_replace('/', ' / ', $content);
+                        $content = str_replace('(', ' ( ', $content);
+                        $content = str_replace(')', ' ) ', $content);
                         $parser = new Parser;
                         $content = $parser->evaluate(substr($content,1));
                         $object->$name = $content;
@@ -547,6 +627,16 @@ class TDataGrid extends TTable
                         try
                         {
                             $content  = $object->$name;
+                            
+                            if (is_null($content))
+                            {
+                                $content = $this->replace($name, $object);
+                                
+                                if ($content === $name)
+                                {
+                                    $content = '';
+                                }
+                            }
                         }
                         catch (Exception $e)
                         {
@@ -600,7 +690,7 @@ class TDataGrid extends TTable
                         $row->add($cell);
                         $cell->add($data);
                         $cell->{'class'} = 'tdatagrid_cell';
-                        $cell-> align = $align;
+                        $cell->{'align'} = $align;
                         
                         if (isset($first_url) AND $this->defaultClick)
                         {
@@ -609,9 +699,18 @@ class TDataGrid extends TTable
                             $cell->{'class'}     = 'tdatagrid_cell';
                         }
                     }
+                    
+                    if ($props)
+                    {
+                        foreach ($props as $prop_name => $prop_value)
+                        {
+                            $cell->$prop_name = $prop_value;
+                        }
+                    }
+                    
                     if ($width)
                     {
-                        $cell->{'width'} = (strpos($width, '%') !== false) ? $width : ($width + 8).'px';
+                        $cell->{'width'} = (strpos($width, '%') !== false || strpos($width, 'px') !== false) ? $width : ($width + 8).'px';
                     }
                 }
             }
@@ -676,7 +775,17 @@ class TDataGrid extends TTable
         $tfoot = new TElement('tfoot');
         $tfoot->{'class'} = 'tdatagrid_footer';
         
+        if ($this->scrollable)
+        {
+            $tfoot->{'style'} = "display: block";
+        }
+        
         $row = new TElement('tr');
+        
+        if ($this->isScrollable() AND $this->hasCustomWidth())
+        {
+            $row->{'style'} = 'display: inline-table; width: 100%';
+        }
         $tfoot->add($row);
         
         if ($this->actions)
@@ -711,7 +820,14 @@ class TDataGrid extends TTable
                 $transformer   = $column->getTransformer();
                 $name          = $column->getName();
                 $align         = $column->getAlign();
+                $width         = $column->getWidth();
                 $cell->{'style'} = "text-align:$align";
+                
+                if ($width)
+                {
+                    $cell->{'width'} = (strpos($width, '%') !== false || strpos($width, 'px') !== false) ? $width : ($width + 8).'px';
+                }
+                
                 if ($totalFunction)
                 {
                     $has_total = true;
@@ -720,7 +836,7 @@ class TDataGrid extends TTable
                     if ($transformer)
                     {
                         // apply the transformer functions over the data
-                        $content = call_user_func($transformer, $content);
+                        $content = call_user_func($transformer, $content, null, null);
                     }
                     $cell->add($content);
                 }
@@ -728,7 +844,6 @@ class TDataGrid extends TTable
                 {
                     $cell->add('&nbsp;');
                 }
-                //$cell->{'class'} = 'tdatagrid_action';
             }
         }
         
@@ -791,34 +906,6 @@ class TDataGrid extends TTable
     }
     
     /**
-     * Prepare action for use
-     * @param $action TAction
-     * @param $object Data Object
-     */
-    private function prepareAction(TAction $action, $object)
-    {
-        $field  = $action->getField();
-        
-        if ( is_null( $field ) )
-        {
-            throw new Exception(AdiantiCoreTranslator::translate('Field for action ^1 not defined', $label) . '.<br>' . 
-                                AdiantiCoreTranslator::translate('Use the ^1 method', 'setField'.'()').'.');
-        }
-        
-        if ( !isset( $object->$field ) )
-        {
-            throw new Exception(AdiantiCoreTranslator::translate('Field ^1 not exists or contains NULL value', $field));
-        }
-        
-        // get the object property that will be passed ahead
-        $action->setParameter('key', isset($object->$field) ? $object->$field : NULL);
-        if (isset($object->$field))
-        {
-            $action->setParameter($field, $object->$field);
-        }
-    }
-    
-    /**
      * Returns the DataGrid's width
      * @return An integer containing the DataGrid's width
      */
@@ -839,7 +926,10 @@ class TDataGrid extends TTable
             // iterate the DataGrid Columns
             foreach ($this->columns as $column)
             {
-                $width += $column->getWidth();
+                if (is_numeric($column->getWidth()))
+                {
+                    $width += $column->getWidth();
+                }
             }
         }
         return $width;
@@ -851,6 +941,11 @@ class TDataGrid extends TTable
     function show()
     {
         $this->processTotals();
+        
+        if (!$this->hasCustomWidth())
+        {
+            $this->{'style'} .= ';width:unset';
+        }
         
         // shows the datagrid
         parent::show();

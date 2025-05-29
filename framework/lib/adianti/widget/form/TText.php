@@ -13,7 +13,7 @@ use Exception;
 /**
  * Text Widget (also known as Memo)
  *
- * @version    4.0
+ * @version    5.5
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -22,10 +22,12 @@ use Exception;
  */
 class TText extends TField implements AdiantiWidgetInterface
 {
-    private   $height;
     private   $exitAction;
+    private   $exitFunction;
+    protected $id;
     protected $formName;
     protected $size;
+    protected $height;
     
     /**
      * Class Constructor
@@ -34,6 +36,7 @@ class TText extends TField implements AdiantiWidgetInterface
     public function __construct($name)
     {
         parent::__construct($name);
+        $this->id   = 'ttext_' . mt_rand(1000000000, 1999999999);
         
         // creates a <textarea> tag
         $this->tag = new TElement('textarea');
@@ -84,11 +87,20 @@ class TText extends TField implements AdiantiWidgetInterface
     }
     
     /**
+     * Set exit function
+     */
+    public function setExitFunction($function)
+    {
+        $this->exitFunction = $function;
+    }
+    
+    /**
      * Show the widget
      */
     public function show()
     {
-        $this->tag-> name  = $this->name;   // tag name
+        $this->tag->{'name'}  = $this->name;   // tag name
+        
         if ($this->size)
         {
             $size = (strstr($this->size, '%') !== FALSE) ? $this->size : "{$this->size}px";
@@ -101,11 +113,16 @@ class TText extends TField implements AdiantiWidgetInterface
             $this->setProperty('style', "height:{$height}", FALSE); //aggregate style info
         }
         
+        if ($this->id and empty($this->tag->{'id'}))
+        {
+            $this->tag->{'id'} = $this->id;
+        }
+        
         // check if the field is not editable
         if (!parent::getEditable())
         {
             // make the widget read-only
-            $this->tag-> readonly = "1";
+            $this->tag->{'readonly'} = "1";
             $this->tag->{'class'} = $this->tag->{'class'} == 'tfield' ? 'tfield_disabled' : $this->tag->{'class'} . ' tfield_disabled'; // CSS
         }
         
@@ -118,6 +135,11 @@ class TText extends TField implements AdiantiWidgetInterface
             $string_action = $this->exitAction->serialize(FALSE);
             $this->setProperty('exitaction', "__adianti_post_lookup('{$this->formName}', '{$string_action}', this, 'callback')");
             $this->setProperty('onBlur', $this->getProperty('exitaction'), FALSE);
+        }
+        
+        if (isset($this->exitFunction))
+        {
+            $this->setProperty('onBlur', $this->exitFunction, FALSE );
         }
         
         // add the content to the textarea

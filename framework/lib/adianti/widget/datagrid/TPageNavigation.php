@@ -11,7 +11,7 @@ use Exception;
 /**
  * Page Navigation provides navigation for a datagrid
  *
- * @version    4.0
+ * @version    5.5
  * @package    widget
  * @subpackage datagrid
  * @author     Pablo Dall'Oglio
@@ -28,6 +28,51 @@ class TPageNavigation
     private $action;
     private $width;
     private $direction;
+    private $hidden;
+    private $resume;
+    
+    /**
+     * Constructor method
+     */
+    public function __construct()
+    {
+        $this->hidden = false;
+        $this->resume = false;
+    }
+    
+    /**
+     * Hide
+     */
+    public function hide()
+    {
+        $this->hidden = true;
+    }
+    
+    /**
+     * Enable counters
+     */
+    public function enableCounters()
+    {
+        $this->resume = true;
+    }
+    
+    /**
+     * Get resume string
+     */
+    private function getResume()
+    {
+        if( !$this->getCount() )
+        {
+            return AdiantiCoreTranslator::translate('No records found');
+        }
+        else
+        {
+            $max = number_format( (min(( $this->getLimit() * $this->getPage() ) , $this->getCount())) , 0, '', '.');
+            $min = number_format( (($this->getLimit() * ($this->getPage() - 1) ) + 1) , 0, '', '.');
+            
+            return AdiantiCoreTranslator::translate('^1 to ^2 from ^3 records', $min, $max, number_format($this->getCount(), 0 , '', '.'));
+        }
+    }
     
     /**
      * Set the Amount of displayed records
@@ -36,6 +81,14 @@ class TPageNavigation
     public function setLimit($limit)
     {
         $this->limit  = (int) $limit;
+    }
+    
+    /**
+     * Returns the limit of records
+     */
+    public function getLimit()
+    {
+        return $this->limit;
     }
     
     /**
@@ -57,12 +110,28 @@ class TPageNavigation
     }
     
     /**
+     * Return the total count of records
+     */
+    public function getCount()
+    {
+        return $this->count;
+    }
+    
+    /**
      * Define the current page
      * @param $page An integer (the current page)
      */
     public function setPage($page)
     {
         $this->page = (int) $page;
+    }
+    
+    /**
+     * Returns the current page
+     */
+    public function getPage()
+    {
+        return $this->page;
     }
     
     /**
@@ -91,7 +160,7 @@ class TPageNavigation
     {
         $this->direction = $direction;
     }
-        
+    
     /**
      * Set the page navigation properties
      * @param $properties array of properties
@@ -123,14 +192,27 @@ class TPageNavigation
      */
     public function show()
     {
+        if ($this->hidden)
+        {
+            return;
+        }
+        
         if (!$this->action instanceof TAction)
         {
             throw new Exception(AdiantiCoreTranslator::translate('You must call ^1 before add this component', __CLASS__ . '::' . 'setAction()'));
         }
         
-        $first_page  = isset($this->first_page) ? $this->first_page : 1;
-        $direction   = 'asc';
-        $page_size = isset($this->limit) ? $this->limit : 10;
+        if ($this->resume)
+        {
+            $total = new TElement('div');
+            $total->{'class'} = 'tpagenavigation_resume';
+            $total->add($this->getResume());
+            $total->show();
+        }
+        
+        $first_page = isset($this->first_page) ? $this->first_page : 1;
+        $direction  = 'asc';
+        $page_size  = isset($this->limit) ? $this->limit : 10;
         $max = 10;
         $registros = $this->count;
         
@@ -153,51 +235,67 @@ class TPageNavigation
             $resto = $registros % $page_size;
         }
         
-        $pages += $resto>0 ? 1 : 0;
+        $pages += $resto > 0 ? 1 : 0;
         $last_page = min($pages, $max);
         
         $nav = new TElement('nav');
         $nav->{'class'} = 'tpagenavigation';
-        $nav-> align = 'center';
+        $nav->{'align'} = 'center';
         
         $ul = new TElement('ul');
         $ul->{'class'} = 'pagination';
         $nav->add($ul);
         
-        // previous
-        $item = new TElement('li');
-        $link = new TElement('a');
-        $span = new TElement('span');
-        $link->{'href'} = '#';
-        $link->{'aria-label'} = 'Previous';
-        $ul->add($item);
-        $item->add($link);
-        $link->add($span);
-        
         if ($first_page > 1)
         {
+            // first
+            $item = new TElement('li');
+            $link = new TElement('a');
+            $span = new TElement('span');
+            $link->{'aria-label'} = 'Previous';
+            $ul->add($item);
+            $item->add($link);
+            $link->add($span);
+            $this->action->setParameter('offset', 0);
+            $this->action->setParameter('limit',  $page_size);
+            $this->action->setParameter('direction', $this->direction);
+            $this->action->setParameter('page',   1);
+            $this->action->setParameter('first_page', 1);
+            $this->action->setParameter('order', $this->order);
+            $link->{'href'}      = $this->action->serialize();
+            $link->{'generator'} = 'adianti';
+            $span->add(TElement::tag('span', '', ['class'=>'fa fa-angle-double-left']));
+            
+            // previous
+            $item = new TElement('li');
+            $link = new TElement('a');
+            $span = new TElement('span');
+            $link->{'aria-label'} = 'Previous';
+            $ul->add($item);
+            $item->add($link);
+            $link->add($span);
             $this->action->setParameter('offset', ($first_page - $max -1) * $page_size);
             $this->action->setParameter('limit',  $page_size);
             $this->action->setParameter('direction', $this->direction);
             $this->action->setParameter('page',   $first_page - $max);
             $this->action->setParameter('first_page', $first_page - $max);
             $this->action->setParameter('order', $this->order);
-            
-            $link-> href      = $this->action->serialize();
-            $link-> generator = 'adianti';
-            $span->add('&laquo;');
-        }
-        else
-        {
-            $span->add('&nbsp;');
+            $link->{'href'}      = $this->action->serialize();
+            $link->{'generator'} = 'adianti';
+            $span->add(TElement::tag('span', '', ['class'=>'fa fa-angle-left'])); //$span->add('&laquo;');
         }
         
+        // active pages
         for ($n = $first_page; $n <= $last_page + $first_page -1; $n++)
         {
             $offset = ($n -1) * $page_size;
             $item = new TElement('li');
             $link = new TElement('a');
             $span = new TElement('span');
+            $ul->add($item);
+            $item->add($link);
+            $link->add($span);
+            $span->add($n);
             
             $this->action->setParameter('offset', $offset);
             $this->action->setParameter('limit',  $page_size);
@@ -206,13 +304,8 @@ class TPageNavigation
             $this->action->setParameter('first_page', $first_page);
             $this->action->setParameter('order', $this->order);
             
-            $link-> href      = $this->action->serialize();
-            $link-> generator = 'adianti';
-            
-            $ul->add($item);
-            $item->add($link);
-            $link->add($span);
-            $span->add($n);
+            $link->{'href'}      = $this->action->serialize();
+            $link->{'generator'} = 'adianti';
             
             if($this->page == $n)
             {
@@ -220,6 +313,7 @@ class TPageNavigation
             }
         }
         
+        // inactive pages/placeholders
         for ($z=$n; $z<=10; $z++)
         {
             $item = new TElement('li');
@@ -232,33 +326,44 @@ class TPageNavigation
             $span->add($z);
         }
         
-        $item = new TElement('li');
-        $link = new TElement('a');
-        $span = new TElement('span');
-        $link->{'aria-label'} = "Next";
-        $ul->add($item);
-        $item->add($link);
-        $link->add($span);
-        
         if ($pages > $max)
         {
-            $offset = ($n -1) * $page_size;
+            // next
             $first_page = $n;
-            
-            $this->action->setParameter('offset',  $offset);
+            $item = new TElement('li');
+            $link = new TElement('a');
+            $span = new TElement('span');
+            $link->{'aria-label'} = "Next";
+            $ul->add($item);
+            $item->add($link);
+            $link->add($span);
+            $this->action->setParameter('offset',  ($n -1) * $page_size);
             $this->action->setParameter('limit',   $page_size);
             $this->action->setParameter('direction', $this->direction);
             $this->action->setParameter('page',    $n);
-            $this->action->setParameter('first_page', $first_page);
+            $this->action->setParameter('first_page', $n);
             $this->action->setParameter('order', $this->order);
-            $link-> href      = $this->action->serialize();
-            $link-> generator = 'adianti';
+            $link->{'href'}      = $this->action->serialize();
+            $link->{'generator'} = 'adianti';
+            $span->add(TElement::tag('span', '', ['class'=>'fa fa-angle-right'])); //$span->add('&raquo;');
             
-            $span->add('&raquo;');
-        }
-        else
-        {
-            $span->add('&nbsp;');
+            // last
+            $item = new TElement('li');
+            $link = new TElement('a');
+            $span = new TElement('span');
+            $link->{'aria-label'} = "Next";
+            $ul->add($item);
+            $item->add($link);
+            $link->add($span);
+            $this->action->setParameter('offset',  ceil($registros / $page_size)* $page_size - $page_size);
+            $this->action->setParameter('limit',   $page_size);
+            $this->action->setParameter('direction', $this->direction);
+            $this->action->setParameter('page',    ceil($registros / $page_size));
+            $this->action->setParameter('first_page', (int) ($registros / ($page_size *10)) *10 +1);
+            $this->action->setParameter('order', $this->order);
+            $link->{'href'}      = $this->action->serialize();
+            $link->{'generator'} = 'adianti';
+            $span->add(TElement::tag('span', '', ['class'=>'fa fa-angle-double-right']));
         }
         
         $nav->show();

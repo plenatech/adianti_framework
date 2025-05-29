@@ -15,7 +15,7 @@ use Exception;
 /**
  * Button Widget
  *
- * @version    4.0
+ * @version    5.5
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -28,6 +28,7 @@ class TButton extends TField implements AdiantiWidgetInterface
     private $image;
     private $properties;
     private $functions;
+    private $tagName;
     protected $label;
     protected $formName;
     
@@ -40,6 +41,14 @@ class TButton extends TField implements AdiantiWidgetInterface
         $button->setAction(new TAction( $callback ), $label);
         $button->setImage( $image );
         return $button;
+    }
+    
+    /**
+     * Add CSS class
+     */
+    public function addStyleClass($class)
+    {
+        $this->{'class'} = 'btn btn-default '. $class;
     }
     
     /**
@@ -59,6 +68,15 @@ class TButton extends TField implements AdiantiWidgetInterface
     public function getAction()
     {
         return $this->action;
+    }
+    
+    /**
+     * Define the tag name
+     * @param  $name  tag name
+     */
+    public function setTagName($name)
+    {
+        $this->tagName = $name;
     }
     
     /**
@@ -109,7 +127,15 @@ class TButton extends TField implements AdiantiWidgetInterface
     {
         $this->properties[$name] = $value;
     }
-
+    
+    /**
+     * Return field property
+     */
+    public function getProperty($name)
+    {
+        return $this->properties[$name];
+    }
+    
     /**
      * Enable the field
      * @param $form_name Form name
@@ -156,10 +182,10 @@ class TButton extends TField implements AdiantiWidgetInterface
             $action.= "__adianti_post_data('{$this->formName}', '{$url}');";
             $action.= "return false;";
                         
-            $button = new TElement('button');
+            $button = new TElement( !empty($this->tagName)? $this->tagName : 'button' );
             $button->{'id'}      = 'tbutton_'.$this->name;
             $button->{'name'}    = $this->name;
-            $button->{'class'}   = 'btn btn-sm btn-default';
+            $button->{'class'}   = 'btn btn-default btn-sm';
             $button->{'onclick'} = $action;
             $action = '';
         }
@@ -167,7 +193,7 @@ class TButton extends TField implements AdiantiWidgetInterface
         {
             $action = $this->functions;
             // creates the button using a div
-            $button = new TElement('div');
+            $button = new TElement( !empty($this->tagName)? $this->tagName : 'div' );
             $button->{'id'}      = 'tbutton_'.$this->name;
             $button->{'name'}    = $this->name;
             $button->{'class'}   = 'btn btn-default btn-sm';
@@ -185,43 +211,8 @@ class TButton extends TField implements AdiantiWidgetInterface
         $span = new TElement('span');
         if ($this->image)
         {
-            $image = new TElement('span');
-            $image->{'style'} = 'padding-right:4px';
-            
-            if (substr($this->image,0,3) == 'bs:')
-            {
-                $image = new TElement('i');
-                $image->{'style'} = 'padding-right:4px';
-                $image->{'class'} = 'glyphicon glyphicon-'.substr($this->image,3);
-            }
-            else if (substr($this->image,0,3) == 'fa:')
-            {
-                $fa_class = substr($this->image,3);
-                if (strstr($this->image, '#') !== FALSE)
-                {
-                    $pieces = explode('#', $fa_class);
-                    $fa_class = $pieces[0];
-                    $fa_color = $pieces[1];
-                }
-                $image = new TElement('i');
-                $image->{'style'} = 'padding-right:4px';
-                $image->{'class'} = 'fa fa-'.$fa_class;
-                if (isset($fa_color))
-                {
-                    $image->{'style'} .= "; color: #{$fa_color}";
-                }
-            }
-            else if (file_exists('app/images/'.$this->image))
-            {
-                $image = new TImage('app/images/'.$this->image);
-                $image->{'style'} = 'padding-right:4px';
-            }
-            else if (file_exists('lib/adianti/images/'.$this->image))
-            {
-                $image = new TImage('lib/adianti/images/'.$this->image);
-                $image->{'style'} = 'padding-right:4px';
-            }
-            
+            $image = new TImage($this->image);
+            $image->{'style'} .= ';padding-right:4px';
             $span->add($image);
         }
         

@@ -8,7 +8,7 @@ use SimpleXMLIterator;
 /**
  * FPDF Adapter that parses XML files from Adianti Framework
  *
- * @version    4.0
+ * @version    5.5
  * @package    wrapper
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
@@ -17,6 +17,7 @@ use SimpleXMLIterator;
  */
 class AdiantiPDFDesigner extends FPDF
 {
+    private $current_locale;
     private $elements;
     private $anchors;
     private $orientation;
@@ -32,17 +33,15 @@ class AdiantiPDFDesigner extends FPDF
      * @param  $format Page format
      * @author Pablo Dall'Oglio
      */
-    public function __construct($orientation = 'P', $format = 'a4')
+    public function __construct($orientation = 'P', $format = 'a4', $unit = 'pt')
     {
-        parent::__construct($orientation, 'pt', $format);
+        parent::__construct($orientation, $unit, $format);
         
         $this->setLocale();
         
         parent::SetAutoPageBreak(true);
         parent::SetMargins(0, 0, 0);
         parent::SetCreator('Adianti Studio PDF Designer');
-        // parent::SetTitle('Letter');
-        // parent::SetKeywords('www.xyz.com.br');
         parent::SetFillColor(255, 255, 255);
         parent::Open();
         parent::AliasNbPages();
@@ -282,17 +281,6 @@ class AdiantiPDFDesigner extends FPDF
     }
     
     /**
-     * Saves the PDF
-     * @param $output Output path
-     * @author Pablo Dall'Oglio
-     */
-    public function save($output)
-    {
-        parent::Output($output);
-        $this->unsetLocale();
-    }
-    
-    /**
      * Draws an ellipse
      * @param  $x X
      * @param  $y Y
@@ -477,6 +465,8 @@ class AdiantiPDFDesigner extends FPDF
      */
     public function setLocale()
     {
+        $this->current_locale = setlocale(LC_ALL, 0);
+        
         if (OS == 'WIN')
         {
             setlocale(LC_ALL, 'english');
@@ -493,14 +483,7 @@ class AdiantiPDFDesigner extends FPDF
      */
     public function unsetLocale()
     {
-        if (OS == 'WIN')
-        {
-            setlocale(LC_ALL, 'english');
-        }
-        else
-        {
-            setlocale(LC_ALL, 'pt_BR');
-        }
+        setlocale(LC_ALL, $this->current_locale);
     }
 
     /**
@@ -585,5 +568,16 @@ class AdiantiPDFDesigner extends FPDF
         {
             $value = utf8_decode($value);
         }
+    }
+    
+    /**
+     * Saves the PDF
+     * @param $output Output path
+     * @author Pablo Dall'Oglio
+     */
+    public function save($output)
+    {
+        parent::Output($output);
+        $this->unsetLocale();
     }
 }

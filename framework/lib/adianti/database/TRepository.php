@@ -15,17 +15,18 @@ use ReflectionClass;
 /**
  * Implements the Repository Pattern to deal with collections of Active Records
  *
- * @version    4.0
+ * @version    5.5
  * @package    database
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
-final class TRepository
+class TRepository
 {
-    private $class; // Active Record class to be manipulated
-    private $criteria; // buffered criteria to use with fluent interfaces
-    private $setValues;
+    protected $class; // Active Record class to be manipulated
+    protected $criteria; // buffered criteria to use with fluent interfaces
+    protected $setValues;
+    protected $columns;
     
     /**
      * Class Constructor
@@ -47,7 +48,7 @@ final class TRepository
         }
         else
         {
-            throw new Exception(AdiantiCoreTranslator::translate('The class ^1 was not found. Check the class name or the file name. They must match', $class));
+            throw new Exception(AdiantiCoreTranslator::translate('The class ^1 was not found. Check the class name or the file name. They must match', '"' . $class . '"'));
         }
     }
     
@@ -58,6 +59,31 @@ final class TRepository
     protected function getEntity()
     {
         return constant($this->class.'::TABLENAME');
+    }
+    
+    /**
+     * Get attribute list from entity
+     */
+    protected function getAttributeList()
+    {
+        if (!empty($this->columns))
+        {
+            return implode(',', $this->columns);
+        }
+        else
+        {
+            $object = new $this->class;
+            return $object->getAttributeList();
+        }
+    }
+    
+    /**
+     * Define columns list
+     */
+    public function select($columns)
+    {
+        $this->columns = $columns;
+        return $this;
     }
     
     /**
@@ -161,9 +187,10 @@ final class TRepository
         {
             $criteria = isset($this->criteria) ? $this->criteria : new TCriteria;
         }
+        
         // creates a SELECT statement
         $sql = new TSqlSelect;
-        $sql->addColumn('*');
+        $sql->addColumn($this->getAttributeList());
         $sql->setEntity($this->getEntity());
         // assign the criteria to the SELECT statement
         $sql->setCriteria($criteria);
@@ -236,6 +263,41 @@ final class TRepository
     }
     
     /**
+     * Load with no aggregates
+     */
+    public function loadStatic()
+    {
+        return $this->load(null, false);
+    }
+    
+    /**
+     * Return a indexed array
+     */
+    public function getIndexedArray($indexColumn, $valueColumn, $criteria = NULL)
+    {
+        $criteria = (empty($criteria)) ? $this->criteria : $criteria;
+        $objects = $this->load($criteria, FALSE);
+        
+        $indexedArray = array();
+        if ($objects)
+        {
+            foreach ($objects as $object)
+            {
+                $key = (isset($object->$indexColumn)) ? $object->$indexColumn : $object->render($indexColumn);
+                $val = (isset($object->$valueColumn)) ? $object->$valueColumn : $object->render($valueColumn);
+                
+                $indexedArray[ $key ] = $val;
+            }
+        }
+        
+        if (empty($criteria) or ( $criteria instanceof TCriteria and empty($criteria->getProperty('order')) ))
+        {
+            asort($indexedArray);
+        }
+        return $indexedArray;
+    }
+    
+    /**
      * Update values in the repository
      */
     public function update($setValues = NULL, TCriteria $criteria = NULL)
@@ -288,7 +350,7 @@ final class TRepository
                 
                 // creates a SELECT statement
                 $sql = new TSqlSelect;
-                $sql->addColumn('*');
+                $sql->addColumn($this->getAttributeList());
                 $sql->setEntity($this->getEntity());
                 // assign the criteria to the SELECT statement
                 $sql->setCriteria($criteria);
@@ -334,7 +396,7 @@ final class TRepository
      * @param $criteria  An TCriteria object, specifiyng the filters
      * @return           The affected rows
      */
-    public function delete(TCriteria $criteria = NULL)
+    public function delete(TCriteria $criteria = NULL, $callObjectLoad = FALSE)
     {
         if (!$criteria)
         {
@@ -349,7 +411,7 @@ final class TRepository
             
             // first, clear cache
             $record = new $class;
-            if ( $cache = $record->getCacheControl() )
+            if ( ($cache = $record->getCacheControl()) OR $callObjectLoad )
             {
                 $pk = $record->getPrimaryKey();
                 
@@ -375,10 +437,20 @@ final class TRepository
                     // iterate the results as objects
                     while ($row = $result-> fetchObject())
                     {
-                        $record_key = $class . '['. $row->$pk . ']';
-                        if ($cache::delValue( $record_key ))
+                        if ($cache)
                         {
-                            TTransaction::log($record_key . ' deleted from cache');
+                            $record_key = $class . '['. $row->$pk . ']';
+                            if ($cache::delValue( $record_key ))
+                            {
+                                TTransaction::log($record_key . ' deleted from cache');
+                            }
+                        }
+                        
+                        if ($callObjectLoad)
+                        {
+                            $object = new $this->class;
+                            $object->fromArray( (array) $row);
+                            $object->delete();
                         }
                     }
                 }
@@ -452,9 +524,8 @@ final class TRepository
             if ($result)
             {
                 $row = $result->fetch();
+                return $row[0];
             }
-            // returns the result
-            return $row[0];
         }
         else
         {
@@ -463,8 +534,63 @@ final class TRepository
         }
     }
     
+    /**
+     * Alias for load()
+     */
     public function get(TCriteria $criteria = NULL, $callObjectLoad = TRUE)
     {
         return $this->load($criteria, $callObjectLoad);
+    }
+    
+    /**
+     * Returns the first collection item
+     */
+    public function first($callObjectLoad = TRUE)
+    {
+        $collection = $this->take(1)->load(null, $callObjectLoad);
+        if (isset($collection[0]))
+        {
+            return $collection[0];
+        }
+    }
+    
+    /**
+     * Returns transformed collection
+     */
+    public function transform( Callable $callback, $callObjectLoad = TRUE)
+    {
+        $collection = $this->load(null, $callObjectLoad);
+        
+        if ($collection)
+        {
+            foreach ($collection as $object)
+            {
+                call_user_func($callback, $object);
+            }
+        }
+        
+        return $collection;
+    }
+    
+    /**
+     * Returns filtered collection
+     */
+    public function filter( Callable $callback, $callObjectLoad = TRUE)
+    {
+        $collection = $this->load(null, $callObjectLoad);
+        $newcollection = [];
+        
+        if ($collection)
+        {
+            foreach ($collection as $object)
+            {
+                if (call_user_func($callback, $object))
+                {
+                    $newcollection[] = $object;
+                }
+            }
+        }
+        
+        return $newcollection;
     }
 }

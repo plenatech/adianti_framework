@@ -7,7 +7,7 @@ use Adianti\Widget\Form\TField;
 /**
  * RadioButton Widget
  *
- * @version    4.0
+ * @version    5.5
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio

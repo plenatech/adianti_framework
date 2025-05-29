@@ -11,7 +11,7 @@ use DateTime;
 /**
  * DatePicker Widget
  *
- * @version    4.0
+ * @version    5.5
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -24,6 +24,8 @@ class TDate extends TEntry implements AdiantiWidgetInterface
     private $dbmask;
     protected $id;
     protected $size;
+    protected $options;
+    protected $replaceOnPost;
     
     /**
      * Class Constructor
@@ -35,12 +37,15 @@ class TDate extends TEntry implements AdiantiWidgetInterface
         $this->id   = 'tdate_' . mt_rand(1000000000, 1999999999);
         $this->mask = 'yyyy-mm-dd';
         $this->dbmask = null;
+        $this->options = [];
+        $this->replaceOnPost = FALSE;
         
         $newmask = $this->mask;
         $newmask = str_replace('dd',   '99',   $newmask);
         $newmask = str_replace('mm',   '99',   $newmask);
         $newmask = str_replace('yyyy', '9999', $newmask);
         parent::setMask($newmask);
+        $this->tag->{'widget'} = 'tdate';
     }
     
     /**
@@ -85,6 +90,8 @@ class TDate extends TEntry implements AdiantiWidgetInterface
     {
         if ($value)
         {
+            $value = substr($value,0,strlen($fromMask));
+            
             $phpFromMask = str_replace( ['dd','mm', 'yyyy'], ['d','m','Y'], $fromMask);
             $phpToMask   = str_replace( ['dd','mm', 'yyyy'], ['d','m','Y'], $toMask);
             
@@ -102,22 +109,33 @@ class TDate extends TEntry implements AdiantiWidgetInterface
      * Define the field's mask
      * @param $mask  Mask for the field (dd-mm-yyyy)
      */
-    public function setMask($mask)
+    public function setMask($mask, $replaceOnPost = FALSE)
     {
         $this->mask = $mask;
+        $this->replaceOnPost = $replaceOnPost;
+        
         $newmask = $this->mask;
         $newmask = str_replace('dd',   '99',   $newmask);
         $newmask = str_replace('mm',   '99',   $newmask);
         $newmask = str_replace('yyyy', '9999', $newmask);
+        
         parent::setMask($newmask);
     }
     
     /**
-     *
+     * Set the mask to be used to colect the data
      */
     public function setDatabaseMask($mask)
     {
         $this->dbmask = $mask;
+    }
+    
+    /**
+     * Set extra datepicker options (ex: autoclose, startDate, daysOfWeekDisabled, datesDisabled)
+     */
+    public function setOption($option, $value)
+    {
+        $this->options[$option] = $value;
     }
     
     /**
@@ -179,6 +197,8 @@ class TDate extends TEntry implements AdiantiWidgetInterface
     {
         $js_mask = str_replace('yyyy', 'yy', $this->mask);
         $language = strtolower(LANG);
+        $options = json_encode($this->options);
+        
         if (parent::getEditable())
         {
             $outer_size = 'undefined';
@@ -187,9 +207,13 @@ class TDate extends TEntry implements AdiantiWidgetInterface
                 $outer_size = $this->size;
                 $this->size = '100%';
             }
-            TScript::create( "tdate_start( '#{$this->id}', '{$this->mask}', '{$language}', '{$outer_size}');");
         }
         
         parent::show();
+        
+        if (parent::getEditable())
+        {
+            TScript::create( "tdate_start( '#{$this->id}', '{$this->mask}', '{$language}', '{$outer_size}', '{$options}');");
+        }
     }
 }

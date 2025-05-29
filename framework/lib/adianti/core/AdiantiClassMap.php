@@ -4,7 +4,7 @@ namespace Adianti\Core;
 /**
  * Class map
  *
- * @version    4.0
+ * @version    5.5
  * @package    core
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
@@ -28,14 +28,17 @@ class AdiantiClassMap
         $classPath['AdiantiCoreApplication']     = 'lib/adianti/core/AdiantiCoreApplication.php';
         $classPath['AdiantiCoreLoader']          = 'lib/adianti/core/AdiantiCoreLoader.php';
         $classPath['AdiantiCoreTranslator']      = 'lib/adianti/core/AdiantiCoreTranslator.php';
+        $classPath['AdiantiTemplateParser']      = 'lib/adianti/core/AdiantiTemplateParser.php';
         $classPath['TConnection']                = 'lib/adianti/database/TConnection.php';
         $classPath['TCriteria']                  = 'lib/adianti/database/TCriteria.php';
         $classPath['TExpression']                = 'lib/adianti/database/TExpression.php';
         $classPath['TFilter']                    = 'lib/adianti/database/TFilter.php';
+        $classPath['TDatabase']                  = 'lib/adianti/database/TDatabase.php';
         $classPath['TRecord']                    = 'lib/adianti/database/TRecord.php';
         $classPath['TRepository']                = 'lib/adianti/database/TRepository.php';
         $classPath['TSqlDelete']                 = 'lib/adianti/database/TSqlDelete.php';
         $classPath['TSqlInsert']                 = 'lib/adianti/database/TSqlInsert.php';
+        $classPath['TSqlMultiInsert']            = 'lib/adianti/database/TSqlMultiInsert.php';
         $classPath['TSqlSelect']                 = 'lib/adianti/database/TSqlSelect.php';
         $classPath['TSqlStatement']              = 'lib/adianti/database/TSqlStatement.php';
         $classPath['TSqlUpdate']                 = 'lib/adianti/database/TSqlUpdate.php';
@@ -51,6 +54,7 @@ class AdiantiClassMap
         $classPath['AdiantiAutocompleteService'] = 'lib/adianti/service/AdiantiAutocompleteService.php';
         $classPath['AdiantiMultiSearchService']  = 'lib/adianti/service/AdiantiMultiSearchService.php';
         $classPath['AdiantiUploaderService']     = 'lib/adianti/service/AdiantiUploaderService.php';
+        $classPath['AdiantiRecordService']       = 'lib/adianti/service/AdiantiRecordService.php';
         $classPath['TCNPJValidator']             = 'lib/adianti/validator/TCNPJValidator.php';
         $classPath['TCPFValidator']              = 'lib/adianti/validator/TCPFValidator.php';
         $classPath['TEmailValidator']            = 'lib/adianti/validator/TEmailValidator.php';
@@ -96,7 +100,9 @@ class AdiantiClassMap
         $classPath['TComboCombined']             = 'lib/adianti/widget/form/TComboCombined.php';
         $classPath['TDate']                      = 'lib/adianti/widget/form/TDate.php';
         $classPath['TDateTime']                  = 'lib/adianti/widget/form/TDateTime.php';
+        $classPath['TTime']                      = 'lib/adianti/widget/form/TTime.php';
         $classPath['TEntry']                     = 'lib/adianti/widget/form/TEntry.php';
+        $classPath['TNumeric']                   = 'lib/adianti/widget/form/TNumeric.php';
         $classPath['TField']                     = 'lib/adianti/widget/form/TField.php';
         $classPath['TFile']                      = 'lib/adianti/widget/form/TFile.php';
         $classPath['TMultiFile']                 = 'lib/adianti/widget/form/TMultiFile.php';
@@ -106,6 +112,8 @@ class AdiantiClassMap
         $classPath['TLabel']                     = 'lib/adianti/widget/form/TLabel.php';
         $classPath['TMultiField']                = 'lib/adianti/widget/form/TMultiField.php';
         $classPath['TMultiSearch']               = 'lib/adianti/widget/form/TMultiSearch.php';
+        $classPath['TMultiEntry']                = 'lib/adianti/widget/form/TMultiEntry.php';
+        $classPath['TUniqueSearch']              = 'lib/adianti/widget/form/TUniqueSearch.php';
         $classPath['TPassword']                  = 'lib/adianti/widget/form/TPassword.php';
         $classPath['TRadioButton']               = 'lib/adianti/widget/form/TRadioButton.php';
         $classPath['TRadioGroup']                = 'lib/adianti/widget/form/TRadioGroup.php';
@@ -115,9 +123,12 @@ class AdiantiClassMap
         $classPath['TSortList']                  = 'lib/adianti/widget/form/TSortList.php';
         $classPath['TSpinner']                   = 'lib/adianti/widget/form/TSpinner.php';
         $classPath['TText']                      = 'lib/adianti/widget/form/TText.php';
+        $classPath['TFieldList']                 = 'lib/adianti/widget/form/TFieldList.php';
+        $classPath['TFormSeparator']             = 'lib/adianti/widget/form/TFormSeparator.php';
         $classPath['TMenu']                      = 'lib/adianti/widget/menu/TMenu.php';
         $classPath['TMenuBar']                   = 'lib/adianti/widget/menu/TMenuBar.php';
         $classPath['TMenuItem']                  = 'lib/adianti/widget/menu/TMenuItem.php';
+        $classPath['TMenuParser']                = 'lib/adianti/widget/menu/TMenuParser.php';
         $classPath['THtmlRenderer']              = 'lib/adianti/widget/template/THtmlRenderer.php';
         $classPath['TBreadCrumb']                = 'lib/adianti/widget/util/TBreadCrumb.php';
         $classPath['TProgressBar']               = 'lib/adianti/widget/util/TProgressBar.php';
@@ -140,6 +151,7 @@ class AdiantiClassMap
         $classPath['TDBSeekButton']              = 'lib/adianti/widget/wrapper/TDBSeekButton.php';
         $classPath['TDBSelect']                  = 'lib/adianti/widget/wrapper/TDBSelect.php';
         $classPath['TDBSortList']                = 'lib/adianti/widget/wrapper/TDBSortList.php';
+        $classPath['TDBUniqueSearch']            = 'lib/adianti/widget/wrapper/TDBUniqueSearch.php';
         $classPath['TQuickForm']                 = 'lib/adianti/widget/wrapper/TQuickForm.php';
         $classPath['TQuickGrid']                 = 'lib/adianti/widget/wrapper/TQuickGrid.php';
         $classPath['TQuickNotebookForm']         = 'lib/adianti/widget/wrapper/TQuickNotebookForm.php';

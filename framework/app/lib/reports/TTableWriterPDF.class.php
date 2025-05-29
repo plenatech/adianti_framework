@@ -1,7 +1,11 @@
 <?php
 /**
- * Write tables in PDF
- * @author Pablo Dall'Oglio
+ * PDF Writer
+ *
+ * @version    5.5
+ * @author     Pablo Dall'Oglio
+ * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @license    http://www.adianti.com.br/framework-license
  */
 class TTableWriterPDF implements ITableWriter
 {
@@ -14,19 +18,52 @@ class TTableWriterPDF implements ITableWriter
      * Constructor
      * @param $widths Array with column widths
      */
-    public function __construct($widths, $orientation='P')
+    public function __construct($widths, $orientation='P', $format = 'A4')
     {
-        // armazena as larguras
         $this->widths = $widths;
-        // inicializa atributos
         $this->styles = array();
+        
+        $sizes = ['A3' => [841.89,1190.55],
+                  'A4' => [595.28,841.89],
+                  'A5' => [420.94,595.28],
+                  'LETTER' => [612,792],
+                  'LEGAL' => [612,1008]];
+        
+        $total_width = array_sum($this->widths);
+        $page_width = ($orientation == 'P' ? $sizes[strtoupper($format)][0] : $sizes[strtoupper($format)][1]) -50;
+        
+        if ($total_width > $page_width)
+        {
+            foreach ($this->widths as $key => $width)
+            {
+                $this->widths[$key] = ($width / $total_width) * $page_width;
+            }
+        }
         
         // define o locale
         setlocale(LC_ALL, 'POSIX');
         // cria o objeto FPDF
-        $this->pdf = new FPDF($orientation, 'pt', 'A4');
+        $this->pdf = new FPDF($orientation, 'pt', $format);
         $this->pdf->Open();
         $this->pdf->AddPage();
+    }
+    
+    /**
+     * Set Header callback
+     */
+    public function setHeaderCallback( $callback )
+    {
+        // call the first time
+        call_user_func($callback, $this);
+        $this->pdf->setHeaderCallback($callback, $this);
+    }
+    
+    /**
+     * Set Footer callback
+     */
+    public function setFooterCallback( $callback )
+    {
+        $this->pdf->setFooterCallback($callback, $this);
     }
     
     /**
@@ -46,9 +83,10 @@ class TTableWriterPDF implements ITableWriter
      * @param @fontcolor font color
      * @param @fillcolor fill color
      */
-    public function addStyle($stylename, $fontface, $fontsize, $fontstyle, $fontcolor, $fillcolor)
+    public function addStyle($stylename, $fontface, $fontsize, $fontstyle, $fontcolor, $fillcolor, $border = null)
     {
-        $this->styles[$stylename] = array($fontface, $fontsize, $fontstyle, $fontcolor, $fillcolor);
+        $border = is_null($border) ? 1 : $border;
+        $this->styles[$stylename] = array($fontface, $fontsize, $fontstyle, $fontcolor, $fillcolor, $border);
     }
     
     /**
@@ -131,7 +169,7 @@ class TTableWriterPDF implements ITableWriter
             $width += $this->widths[$n];
         }
         // exibe a célula com o conteúdo passado
-        $this->pdf->Cell( $width, $fontsize * 1.5, $content, 1, 0, strtoupper(substr($align,0,1)), true);
+        $this->pdf->Cell( $width, $fontsize * 1.5, $content, $this->styles[$stylename][5], 0, strtoupper(substr($align,0,1)), true);
         $this->colcounter += $colspan;
     }
     
