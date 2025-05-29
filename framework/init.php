@@ -1,7 +1,7 @@
 <?php
-if (version_compare(PHP_VERSION, '7.1.0') == -1)
+if (version_compare(PHP_VERSION, '7.4.0') == -1)
 {
-    die ('The minimum version required for PHP is 7.1.0');
+    die ('The minimum version required for PHP is 7.4.0');
 }
 
 if (!file_exists('app/config/application.ini'))
@@ -13,9 +13,9 @@ if (!file_exists('app/config/application.ini'))
 require_once 'lib/adianti/core/AdiantiCoreLoader.php';
 spl_autoload_register(array('Adianti\Core\AdiantiCoreLoader', 'autoload'));
 Adianti\Core\AdiantiCoreLoader::loadClassMap();
+
 $loader = require 'vendor/autoload.php';
 $loader->register();
-die();
 
 // read configurations
 $ini = parse_ini_file('app/config/application.ini', true);
