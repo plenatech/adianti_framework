@@ -6,7 +6,7 @@
  * @package    widget_gtk
  * @subpackage container
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TWindow extends GtkWindow
@@ -32,6 +32,15 @@ class TWindow extends GtkWindow
     public function setPosition($x, $y)
     {
         parent::set_uposition($x, $y);
+    }
+    
+    /**
+     * Define the window's title
+     * @param  $title  Window's title
+     */
+    public function setTitle($title)
+    {
+        parent::set_title($title);
     }
     
     /**

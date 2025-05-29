@@ -5,7 +5,7 @@
  * @version    1.0
  * @package    control
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TStandardSeek extends TWindow
@@ -217,7 +217,11 @@ class TStandardSeek extends TWindow
     public function onSelect($param)
     {
         $key = $param['key'];
-        $database = isset($param['database'])   ? $param['database'] : TSession::getValue('standard_seek_database');
+        $database      = isset($param['database'])      ? $param['database'] : TSession::getValue('standard_seek_database');
+        $receive_key   = isset($param['receive_key'])   ? $param['receive_key']   : TSession::getValue('standard_seek_receive_key');
+        $receive_field = isset($param['receive_field']) ? $param['receive_field'] : TSession::getValue('standard_seek_receive_field');
+        $display_field = isset($param['display_field']) ? $param['display_field'] : TSession::getValue('standard_seek_display_field');
+        $parent        = isset($param['parent'])        ? $param['parent']        : TSession::getValue('standard_seek_parent');
         
         try
         {
@@ -226,11 +230,6 @@ class TStandardSeek extends TWindow
             $model = isset($param['model']) ? $param['model'] : TSession::getValue('standard_seek_model');
             $activeRecord = new $model($key);
             TTransaction::close();
-
-            $receive_key   = isset($param['receive_key'])   ? $param['receive_key']   : TSession::getValue('standard_seek_receive_key');
-            $receive_field = isset($param['receive_field']) ? $param['receive_field'] : TSession::getValue('standard_seek_receive_field');
-            $display_field = isset($param['display_field']) ? $param['display_field'] : TSession::getValue('standard_seek_display_field');
-            $parent        = isset($param['parent'])        ? $param['parent']        : TSession::getValue('standard_seek_parent');
             
             $object = new StdClass;
             $object->$receive_key   = $activeRecord->{'id'};
@@ -239,11 +238,15 @@ class TStandardSeek extends TWindow
             TForm::sendData($parent, $object);
             parent::closeWindow(); // closes the window
         }
-        catch (Exception $e) // em caso de exceção
+        catch (Exception $e) // in case of exception
         {
-            // exibe a mensagem gerada pela exceção
-            new TMessage('error', $e->getMessage());
-            // desfaz todas alterações no banco de dados
+            // clear fields
+            $object = new StdClass;
+            $object->$receive_key   = '';
+            $object->$receive_field = '';
+            TForm::sendData($parent, $object);
+            
+            // undo all pending operations
             TTransaction::rollback();
         }
     }

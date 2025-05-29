@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage container
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TPage extends TElement
@@ -156,6 +156,11 @@ class TPage extends TElement
     {
         $isMobile = FALSE;
         
+        if (PHP_SAPI == 'cli')
+        {
+            return FALSE;
+        }
+        
         if (isset($_SERVER['HTTP_X_WAP_PROFILE']) or isset($_SERVER['HTTP_PROFILE']))
         {
             $isMobile = TRUE;
@@ -176,7 +181,7 @@ class TPage extends TElement
         {
             if (strpos(strtolower($_SERVER['HTTP_USER_AGENT']),$mb) !== FALSE)
             {
-            	$isMobile = TRUE;
+             	$isMobile = TRUE;
             }
         }
         

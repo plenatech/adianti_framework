@@ -26,7 +26,9 @@ class TApplicationTranslator
         $this->messages['en'][] = 'Tool';
         $this->messages['en'][] = 'Data';
         $this->messages['en'][] = 'Open';
+        $this->messages['en'][] = 'New';
         $this->messages['en'][] = 'Save';
+        $this->messages['en'][] = 'Find';
         $this->messages['en'][] = 'Delete';
         $this->messages['en'][] = 'Cancel';
         $this->messages['en'][] = 'Yes';
@@ -65,7 +67,9 @@ class TApplicationTranslator
         $this->messages['pt'][] = 'Ferramenta';
         $this->messages['pt'][] = 'Dados';
         $this->messages['pt'][] = 'Abrir';
+        $this->messages['pt'][] = 'Novo';
         $this->messages['pt'][] = 'Salvar';
+        $this->messages['pt'][] = 'Buscar';
         $this->messages['pt'][] = 'Excluir';
         $this->messages['pt'][] = 'Cancelar';
         $this->messages['pt'][] = 'Sim';

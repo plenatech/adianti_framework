@@ -6,7 +6,7 @@
  * @package    widget_gtk
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TRadioGroup extends GtkHbox
@@ -15,6 +15,7 @@ class TRadioGroup extends GtkHbox
     private $wname;
     private $items;
     private $validations;
+    protected $formName;
     
     /**
      * Class Constructor
@@ -73,6 +74,16 @@ class TRadioGroup extends GtkHbox
                 return $key;
             }
         }
+    }
+    
+    /**
+     * Define the name of the form to wich the button is attached
+     * @param $name    A string containing the name of the form
+     * @ignore-autocomplete on
+     */
+    public function setFormName($name)
+    {
+        $this->formName = $name;
     }
     
     /**
@@ -138,6 +149,29 @@ class TRadioGroup extends GtkHbox
                 $parameters = $validation[2];
                 
                 $validator->validate($label, $this->getValue(), $parameters);
+            }
+        }
+    }
+    
+    /**
+     * Register a tip
+     * @param $text Tooltip Text
+     */
+    function setTip($text)
+    {
+        if ($this->radios)
+        {
+            foreach ($this->radios as $key => $radio)
+            {
+                if (method_exists($radio, 'set_tooltip_text'))
+                {
+                    $radio->set_tooltip_text($text);
+                }
+                else
+                {
+                    $tooltip = TooltipSingleton::getInstance();
+                    $tooltip->set_tip($radio, $text);
+                }
             }
         }
     }

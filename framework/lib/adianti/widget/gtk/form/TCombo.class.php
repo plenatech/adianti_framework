@@ -6,7 +6,7 @@
  * @package    widget_gtk
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TCombo extends GtkHBox
@@ -15,6 +15,8 @@ class TCombo extends GtkHBox
     private $model;
     private $iters;
     private $validations;
+    protected $formName;
+    protected $changeAction;
     
     /**
      * Class Constructor
@@ -33,6 +35,14 @@ class TCombo extends GtkHBox
         $this->wname = $name;
         parent::add($this->widget);
         $this->validations = array();
+    }
+    
+    /**
+     * Clear the combo
+     */
+    public function clear()
+    {
+        $this->model->clear();
     }
     
     /**
@@ -99,6 +109,50 @@ class TCombo extends GtkHBox
         }
     }
     
+    /**
+     * Define the name of the form to wich the button is attached
+     * @param $name    A string containing the name of the form
+     * @ignore-autocomplete on
+     */
+    public function setFormName($name)
+    {
+        $this->formName = $name;
+    }
+    
+    /**
+     * Define the action to be executed when the user changes the combo
+     * @param $action TAction object
+     */
+    function setChangeAction(TAction $action)
+    {
+        $this->changeAction = $action;
+        $this->widget->connect('changed', array($this, 'onExecuteExitAction'));
+    }
+    
+    /**
+     * Execute the exit action
+     */
+    public function onExecuteExitAction()
+    {
+        $callback = $this->changeAction->getAction();
+        $param = (array) TForm::retrieveData($this->formName);
+        call_user_func($callback, $param);
+    }
+    
+    /**
+     * Reload combobox items after it is already shown
+     * @param $formname form name (used in gtk version)
+     * @param $name field name
+     * @param $items array with items
+     */
+    public static function reload($formname, $name, $items)
+    {
+        $form = TForm::getFormByName($formname);
+        $combo = $form->getField($name);
+        $combo->clear();
+        $combo->addItems($items);
+    }
+    
     // for compability reasons
     public function setProperty($property, $value) {}
     
@@ -146,6 +200,23 @@ class TCombo extends GtkHBox
                 
                 $validator->validate($label, $this->getValue(), $parameters);
             }
+        }
+    }
+    
+    /**
+     * Register a tip
+     * @param $text Tooltip Text
+     */
+    function setTip($text)
+    {
+        if (method_exists($this, 'set_tooltip_text'))
+        {
+            $this->widget->set_tooltip_text($text);
+        }
+        else
+        {
+            $tooltip = TooltipSingleton::getInstance();
+            $tooltip->set_tip($this->widget, $text);
         }
     }
 }

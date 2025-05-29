@@ -6,7 +6,7 @@
  * @package    widget_gtk
  * @subpackage container
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TPage extends GtkFrame
@@ -60,18 +60,25 @@ class TPage extends GtkFrame
      * Open a File Dialog
      * @param $file File Name
      */
-    public function OpenFile($file)
+    public function openFile($file)
     {
         $ini = parse_ini_file('application.ini');
         $viewer = $ini['viewer'];
         
-        if (OS != 'WIN')
+        if (file_exists($viewer))
         {
-            exec("$viewer $file >/dev/null &");
+            if (OS != 'WIN')
+            {
+                exec("$viewer $file >/dev/null &");
+            }
+            else
+            {
+                exec("$viewer $file >NULL &");
+            }
         }
         else
         {
-            exec("$viewer $file >NULL &");
+            throw new Exception(TAdiantiCoreTranslator::translate('File not found') . ': ' . $viewer);
         }
     }
 }

@@ -6,13 +6,14 @@
  * @package    widget_web
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TText extends TField
 {
     protected $size;
     private   $height;
+    private   $exitaction;
     
     /**
      * Class Constructor
@@ -45,6 +46,15 @@ class TText extends TField
     }
     
     /**
+     * Define the action to be executed when the user leaves the form field
+     * @param $action TAction object
+     */
+    function setExitAction($action)
+    {
+        $this->exitaction = $action;
+    }
+    
+    /**
      * Show the widget
      */
     public function show()
@@ -62,6 +72,13 @@ class TText extends TField
             // make the widget read-only
             $this->tag-> readonly = "1";
             $this->tag->{'class'} = 'tfield_disabled'; // CSS
+        }
+        
+        if (isset($this->exitaction))
+        {
+            $string_action = $this->exitaction->serialize(FALSE);
+            $this->setProperty('onBlur', "serialform=(\$('#{$this->formName}').serialize());
+                                          ajaxLookup('$string_action&'+serialform, this)");
         }
         
         // add the content to the textarea

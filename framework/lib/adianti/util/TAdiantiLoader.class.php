@@ -5,7 +5,7 @@
  * @version    1.0
  * @package    util
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TAdiantiLoader
@@ -35,7 +35,8 @@ class TAdiantiLoader
      */
     static function autoload($class, $toolkit = 'web')
     {
-        $folders = array('lib/adianti/widget/' . $toolkit,
+        $folders = array('app/lib', 
+                         'lib/adianti/widget/' . $toolkit,
                          'lib/adianti/database',
                          'lib/adianti/control',
                          'lib/adianti/util',

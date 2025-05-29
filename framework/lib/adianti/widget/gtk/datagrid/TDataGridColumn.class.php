@@ -6,7 +6,7 @@
  * @package    widget_gtk
  * @subpackage datagrid
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TDataGridColumn extends GtkTreeViewColumn
@@ -20,6 +20,8 @@ class TDataGridColumn extends GtkTreeViewColumn
     private $sort_up;
     private $sort_down;
     private $transformer;
+    private $renderer;
+    private $editaction;
     
     /**
      * Class Constructor
@@ -43,14 +45,14 @@ class TDataGridColumn extends GtkTreeViewColumn
             $alignment = 1.0;
         
         parent::__construct();
-        $cell_renderer = new GtkCellRendererText;
+        $this->renderer = new GtkCellRendererText;
         if ($width)
         {
-            $cell_renderer->set_property('width', $width);
+            $this->renderer->set_property('width', $width);
             parent::set_fixed_width($width);
         }
-        $cell_renderer->set_property('xalign', $alignment);
-        parent::pack_start($cell_renderer, true);
+        $this->renderer->set_property('xalign', $alignment);
+        parent::pack_start($this->renderer, true);
         parent::set_alignment($alignment);
         parent::set_title($label);
         
@@ -69,6 +71,14 @@ class TDataGridColumn extends GtkTreeViewColumn
         $this->sort_down->hide();
         
         parent::set_widget($header_hbox);
+    }
+    
+    /**
+     * Returns the cell renderer
+     */
+    public function getRenderer()
+    {
+        return $this->renderer;
     }
     
     /**
@@ -117,7 +127,7 @@ class TDataGridColumn extends GtkTreeViewColumn
      * the user clicks over the column header
      * @param $action A TAction object
      */
-    public function setAction($action)
+    public function setAction(TAction $action)
     {
         $this->set_clickable(TRUE);
         $this->connect_simple('clicked', array($this, 'onExecuteAction'),
@@ -149,6 +159,30 @@ class TDataGridColumn extends GtkTreeViewColumn
     public function getAction()
     {
         return $this->action;
+    }
+    
+    /**
+     * Define the action to be executed when
+     * the user clicks do edit the column
+     * @param $action   A TDataGridAction object
+     */
+    public function setEditAction(TDataGridAction $editaction)
+    {
+        $this->editaction = $editaction;
+    }
+    
+    /**
+     * Returns the action defined by setEditAction() method
+     * @return the action to be executed when the
+     * user clicks do edit the column
+     */
+    public function getEditAction()
+    {
+        // verify if the column has an actions
+        if ($this->editaction)
+        {
+            return $this->editaction;
+        }
     }
     
     /**

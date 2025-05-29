@@ -6,14 +6,15 @@
  * @package    widget_web
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TForm
 {
     protected $fields; // array containing the form fields
-    private   $name;   // form name
-    private   $js_function;
+    protected $name;   // form name
+    protected $js_function;
+    static private $forms;
     
     /**
      * Class Constructor
@@ -21,7 +22,23 @@ class TForm
      */
     public function __construct($name = 'my_form')
     {
-        $this->setName($name);
+        // register this form
+        self::$forms[$name] = $this;
+        if ($name)
+        {
+            $this->setName($name);
+        }
+    }
+    
+    /**
+     * Returns the form object by its name
+     */
+    public static function getFormByName($name)
+    {
+        if (isset(self::$forms[$name]))
+        {
+            return self::$forms[$name];
+        }
     }
     
     /**
@@ -71,9 +88,8 @@ class TForm
                         $script->{'language'} = 'JavaScript';
                         $script->setUseSingleQuotes(TRUE);
                         $script->setUseLineBreaks(FALSE);
-                        $script->add( "document.{$form_name}.{$field}_{$property}.value = '{$data}';" );
+                        $script->add( " try { document.{$form_name}.{$field}_{$property}.value = '{$data}'; } catch (e) { } " );
                         $script->show();
-                        //echo "window.opener.document.{$form_name}.{$field}_{$property}.value = '{$data}';";
                     }
                 }
                 else
@@ -94,14 +110,13 @@ class TForm
                     $script->setUseLineBreaks(FALSE);
                     if ($aggregate)
                     {
-                        $script->add( "if (document.{$form_name}.{$field}.value == \"\") { document.{$form_name}.{$field}.value  = '{$value}'; } else { document.{$form_name}.{$field}.value = document.{$form_name}.{$field}.value + ', {$value}' }" );
+                        $script->add( "try { if (document.{$form_name}.{$field}.value == \"\") { document.{$form_name}.{$field}.value  = '{$value}'; } else { document.{$form_name}.{$field}.value = document.{$form_name}.{$field}.value + ', {$value}' }  } catch (e) { } " );
                     }
                     else
                     {
-                        $script->add( "document.{$form_name}.{$field}.value = '{$value}';" );
+                        $script->add( "try { document.{$form_name}.{$field}.value = '{$value}'; } catch (e) { } " );
                     }
                     $script->show();
-                    //echo "window.opener.document.{$form_name}.{$field}.value = '{$value}';";
                 }
             }
         }
@@ -134,15 +149,11 @@ class TForm
             if ($name)
             {
                 $this->fields[$name] = $field;
+                $field->setFormName($this->name);
                 
                 if ($field instanceof TButton)
                 {
-                    $field->setFormName($this->name);
                     $field->addFunction($this->js_function);
-                }
-                if ($field instanceof TSeekButton OR $field instanceof TMultiField)
-                {
-                    $field->setFormName($this->name);
                 }
             }
         }

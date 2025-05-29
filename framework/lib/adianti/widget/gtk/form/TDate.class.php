@@ -6,7 +6,7 @@
  * @package    widget_gtk
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TDate extends GtkHBox
@@ -18,6 +18,8 @@ class TDate extends GtkHBox
     private $month;
     private $year;
     private $validations;
+    protected $formName;
+    protected $exitAction;
     
     /**
      * Class Constructor
@@ -28,16 +30,13 @@ class TDate extends GtkHBox
         parent::__construct();
         
         $this->wname = $name;
-        $this->mask = 'dd/mm/yyyy';
+        $this->mask = 'yyyy-mm-dd';
         $this->validations = array();
         
         // creates the entry field
-        $this->entry    = new GtkEntry;
-        $this->entry->set_size_request(200, 24);
-        
-        // avoid user to type
-        $this->entry->set_editable(false);
-        $this->entry->set_sensitive(FALSE);
+        $this->entry = new TEntry($name);
+        $this->entry->setSize(200);//set_size_request(200, 24);
+        $this->setMask($this->mask);
         parent::add($this->entry);
         
         // creates a button with a calendar image
@@ -155,7 +154,12 @@ class TDate extends GtkHBox
         $return = str_replace('yyyy', $year,  $return);
         
         // put the selected date in the entry field
-        $this->entry->set_text($return);
+        $this->entry->setValue($return);
+        
+        if (isset($this->exitAction))
+        {
+            $this->entry->onExecuteExitAction();
+        }
         
         // fecha janela do calendário
         $this->popWindow->hide();
@@ -184,7 +188,7 @@ class TDate extends GtkHBox
      */
     public function setValue($value)
     {
-        $this->entry->set_text($value);
+        $this->entry->setValue($value);
     }
     
     /**
@@ -192,7 +196,28 @@ class TDate extends GtkHBox
      */
     public function getValue()
     {
-        return $this->entry->get_text();
+        return $this->entry->getValue();
+    }
+    
+    /**
+     * Define the name of the form to wich the button is attached
+     * @param $name    A string containing the name of the form
+     * @ignore-autocomplete on
+     */
+    public function setFormName($name)
+    {
+        $this->formName = $name;
+        $this->entry->setFormName($name);
+    }
+    
+    /**
+     * Define the action to be executed when the user leaves the form field
+     * @param $action TAction object
+     */
+    function setExitAction(TAction $action)
+    {
+        $this->exitAction = $action;
+        $this->entry->setExitAction($action);
     }
     
     /**
@@ -201,7 +226,7 @@ class TDate extends GtkHBox
      */
     public function setEditable($editable)
     {
-        $this->entry->set_sensitive($editable);
+        $this->entry->setEditable($editable);
     }
     
     /**
@@ -210,7 +235,7 @@ class TDate extends GtkHBox
      */
     public function setSize($size)
     {
-        $this->entry->set_size_request($size, 24);
+        $this->entry->setSize($size);
     }
     
     /**
@@ -220,6 +245,12 @@ class TDate extends GtkHBox
     public function setMask($mask)
     {
         $this->mask = $mask;
+        
+        $newmask = $this->mask;
+        $newmask = str_replace('dd',   '99',   $newmask);
+        $newmask = str_replace('mm',   '99',   $newmask);
+        $newmask = str_replace('yyyy', '9999', $newmask);
+        $this->entry->setMask($newmask);
     }
     
     /**
@@ -309,6 +340,15 @@ class TDate extends GtkHBox
                 $validator->validate($label, $this->getValue(), $parameters);
             }
         }
+    }
+    
+    /**
+     * Register a tip
+     * @param $text Tooltip Text
+     */
+    function setTip($text)
+    {
+        $this->entry->setTip($text);
     }
 }
 ?>

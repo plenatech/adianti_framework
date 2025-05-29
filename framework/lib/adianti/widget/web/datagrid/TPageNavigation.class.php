@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage datagrid
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TPageNavigation
@@ -25,7 +25,7 @@ class TPageNavigation
      */
     public function setLimit($limit)
     {
-        $this->limit  = $limit;
+        $this->limit  = (int) $limit;
     }
     
     /**
@@ -43,7 +43,7 @@ class TPageNavigation
      */
     public function setCount($count)
     {
-        $this->count = $count;
+        $this->count = (int) $count;
     }
     
     /**
@@ -52,7 +52,7 @@ class TPageNavigation
      */
     public function setPage($page)
     {
-        $this->page = $page;
+        $this->page = (int) $page;
     }
     
     /**
@@ -61,7 +61,7 @@ class TPageNavigation
      */
     public function setFirstPage($first_page)
     {
-        $this->first_page = $first_page;
+        $this->first_page = (int) $first_page;
     }
     
     /**

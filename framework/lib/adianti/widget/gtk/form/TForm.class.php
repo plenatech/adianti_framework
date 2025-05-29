@@ -6,13 +6,13 @@
  * @package    widget_gtk
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TForm extends GtkFrame
 {
     protected $fields;
-    protected $name;
+    protected $fname;
     static private $forms;
     
     /**
@@ -23,11 +23,23 @@ class TForm extends GtkFrame
     {
         parent::__construct();
         parent::set_shadow_type(Gtk::SHADOW_NONE);
+        
         // register this form
         self::$forms[$name] = $this;
         if ($name)
         {
             $this->setName($name);
+        }
+    }
+    
+    /**
+     * Returns the form object by its name
+     */
+    public static function getFormByName($name)
+    {
+        if (isset(self::$forms[$name]))
+        {
+            return self::$forms[$name];
         }
     }
     
@@ -48,6 +60,17 @@ class TForm extends GtkFrame
         return $this->fname;
     }
     
+    /**
+     * get form data in a static way
+     * for internal use
+     * @ignore-autocomplete on
+     * @param $form_name Form Name
+     */
+    public function retrieveData($form_name)
+    {
+        $instance = self::$forms[$form_name];
+        return $instance->getData();
+    }
     
     /**
      * Send data for any form by it's name
@@ -82,11 +105,7 @@ class TForm extends GtkFrame
         {
             $name = $field->getName();
             $this->fields[$name] = $field;
-            
-            if ($field instanceof TButton)
-            {
-                $field->setFormName($this->name);
-            }
+            $field->setFormName($this->fname);
         }
     }
     
@@ -169,15 +188,17 @@ class TForm extends GtkFrame
             }
             else
             {
-                $parts = explode('_', $property, 2); // authors_author_name
-                if (count($parts) == 2)
+                $parts = explode('_', $property); // authors_list_name
+                if (count($parts) == 3)
                 {
-                    if (isset($this->fields[$parts[0]])) // subfield of TMutifield in TSeekButton
+                    $mtfproperty = $parts[0] . '_' . $parts[1];
+                    
+                    if (isset($this->fields[$mtfproperty])) // subfield of TMutifield in TSeekButton
                     {
-                        $new_property = $parts[1];
+                        $new_property = $parts[2];
                         $new_object=new StdClass;
                         $new_object->$new_property = $value;
-                        $this->fields[$parts[0]]->setFormData($new_object);
+                        $this->fields[$mtfproperty]->setFormData($new_object);
                     }
                 }
             }

@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage container
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TFrame extends TElement
@@ -162,15 +162,18 @@ class TFrame extends TElement
             }
             else if (method_exists($uibuilder, 'getChildren'))
             {
-                foreach ($uibuilder->getChildren() as $object) // run through telement conteiners (position)
+                if ($uibuilder->getChildren())
                 {
-                    if (method_exists($object, 'getChildren'))
+                    foreach ($uibuilder->getChildren() as $object) // run through telement conteiners (position)
                     {
-                        foreach ($object->getChildren() as $child)
+                        if (method_exists($object, 'getChildren'))
                         {
-                            if ($child instanceof TNotebook)
+                            foreach ($object->getChildren() as $child)
                             {
-                                $returnValue = array_merge($returnValue, array($child->id), (array)$child->_getSubNotes());
+                                if ($child instanceof TNotebook)
+                                {
+                                    $returnValue = array_merge($returnValue, array($child->id), (array)$child->_getSubNotes());
+                                }
                             }
                         }
                     }

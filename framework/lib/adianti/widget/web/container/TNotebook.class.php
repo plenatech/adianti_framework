@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage container
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TNotebook
@@ -86,10 +86,11 @@ class TNotebook
         
         // creates a table
         $note_table = new TTable;
-        $note_table-> width = $this->width;
-        $note_table-> border = 0;
-        $note_table-> cellspacing = 0;
-        $note_table-> cellpadding = 0;
+        $note_table->{'width'} = $this->width;
+        $note_table->{'border'} = 0;
+        $note_table->{'cellspacing'} = 0;
+        $note_table->{'cellpadding'} = 0;
+        $note_table->{'class'} = 'notebook-table';
         
         // add a row for the tabs
         $row = $note_table->addRow();

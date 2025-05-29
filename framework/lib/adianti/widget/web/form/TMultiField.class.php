@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TMultiField extends TField
@@ -16,7 +16,7 @@ class TMultiField extends TField
     private $height;
     private $width;
     private $className;
-    private $formName;
+    protected $formName;
     
     /**
      * Class Constructor
@@ -38,17 +38,14 @@ class TMultiField extends TField
      */
     public function setFormName($name)
     {
-        $this->formName = $name;
+        parent::setFormName($name);
         
         if ($this->fields)
         {
             foreach($this->fields as $name => $field)
             {
                 $obj = $field->{'field'};
-                if ($obj instanceof TSeekButton)
-                {
-                    $obj->setFormName($this->formName);
-                }
+                $obj->setFormName($this->formName);
             }
         }
     }
@@ -167,9 +164,6 @@ class TMultiField extends TField
     public function show()
     {
         // include the needed libraries and styles
-        TPage::include_css('lib/adianti/include/tmultifield/tmultifield.css');
-        TPage::include_js('lib/adianti/include/tmultifield/tmultifield.js');
-        
         if ($this->fields)
         {
             $table = new TTable;

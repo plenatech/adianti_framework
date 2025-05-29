@@ -2,7 +2,7 @@
 include_once 'lib/adianti/util/TAdiantiLoader.class.php';
 spl_autoload_register(array('TAdiantiLoader', 'autoload_web'));
 define('APPLICATION_NAME', 'framework');
-
+define('OS', strtoupper(substr(PHP_OS, 0, 3)));
 class TApplication
 {
     static public function run()
@@ -33,13 +33,20 @@ class TApplication
             $class   = isset($_REQUEST['class'])    ? $_REQUEST['class']   : '';
             $static  = isset($_REQUEST['static'])   ? $_REQUEST['static']  : '';
             $method  = isset($_REQUEST['method'])   ? $_REQUEST['method']  : '';
-            $encoding= isset($_REQUEST['encoding']) ? $_REQUEST['encoding']: '';
             
             if (class_exists($class))
             {
                 if ($static)
                 {
-                    call_user_func(array($class, $method),$_REQUEST);
+                    $rf = new ReflectionMethod($class, $method);
+                    if ($rf->isStatic())
+                    {
+                        call_user_func(array($class, $method),$_REQUEST);
+                    }
+                    else
+                    {
+                        call_user_func(array(new $class, $method),$_REQUEST);
+                    }
                 }
                 else
                 {
@@ -69,10 +76,11 @@ class TApplication
                 new TMessage('error', "<b>Error</b>: class <b><i><u>{$class}</u></i></b> not found");
             }
             
-            $css = TPage::getLoadedCSS();
-            $js  = TPage::getLoadedJS();
-            echo $css;
-            echo $js;
+            if (!$static)
+            {
+                echo TPage::getLoadedCSS();
+            }
+            echo TPage::getLoadedJS();
             
             echo $content;
         }
@@ -94,15 +102,9 @@ class TApplication
         unset($parameters['method']);
         $url = array_merge($url, (array) $parameters);
         
-        if (isset($_REQUEST['isajax']) AND $_REQUEST['isajax'] == '1') // create ajax flag
-        {
-            echo "<script language='JavaScript'> __adianti_goto_page('index.php?".http_build_query($url)."'); </script>";
-        }
-        else
-        {
-            echo "<script language='JavaScript'> window.location='?".http_build_query($url)."'; </script>";
-        }
+        echo "<script language='JavaScript'> __adianti_goto_page('index.php?".http_build_query($url)."'); </script>";
     }
 }
+
 TApplication::run();
 ?>

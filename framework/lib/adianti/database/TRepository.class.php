@@ -5,7 +5,7 @@
  * @version    1.0
  * @package    database
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 final class TRepository
@@ -55,8 +55,11 @@ final class TRepository
             $result= $conn->Query($sql->getInstruction());
             $results = array();
             
+            $class = $this->class;
+            $callback = array($class, 'load'); // bypass compiler
+            
             // Discover if load() is overloaded
-            $rm = new ReflectionMethod($this->class, 'load');
+            $rm = new ReflectionMethod($class, $callback[1]);
             
             if ($result)
             {
@@ -64,7 +67,7 @@ final class TRepository
                 while ($row = $result->fetchObject($this->class))
                 {
                     // reload the object because its load() method may be overloaded
-                    if ($rm->getDeclaringClass()->getName() !== 'TRecord')
+                    if ($rm->getDeclaringClass()-> getName () !== 'TRecord')
                     {
                         $row->reload();
                     }
@@ -77,7 +80,7 @@ final class TRepository
         else
         {
             // if there's no active transaction opened
-            throw new Exception('No active transactions !!');
+            throw new Exception(TAdiantiCoreTranslator::translate('No active transactions') . ': ' . __METHOD__ .' '. $this->getEntity());
         }
     }
     
@@ -106,7 +109,7 @@ final class TRepository
         else
         {
             // if there's no active transaction opened
-            throw new Exception('No active transactions !!');
+            throw new Exception(TAdiantiCoreTranslator::translate('No active transactions') . ': ' . __METHOD__ .' '. $this->getEntity());
         }
     }
     
@@ -141,7 +144,7 @@ final class TRepository
         else
         {
             // if there's no active transaction opened
-            throw new Exception('No active transactions !!');
+            throw new Exception(TAdiantiCoreTranslator::translate('No active transactions') . ': ' . __METHOD__ .' '. $this->getEntity());
         }
     }
 }

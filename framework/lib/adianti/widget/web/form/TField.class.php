@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 abstract class TField
@@ -16,6 +16,7 @@ abstract class TField
     protected $value;
     protected $editable;
     protected $tag;
+    protected $formName;
     private   $validations;
     
     /**
@@ -71,6 +72,25 @@ abstract class TField
     public function getValue()
     {
         return $this->value;
+    }
+    
+    /**
+     * Define the name of the form to wich the button is attached
+     * @param $name    A string containing the name of the form
+     * @ignore-autocomplete on
+     */
+    public function setFormName($name)
+    {
+        $this->formName = $name;
+    }
+    
+    /**
+     * Define the field's tooltip
+     * @param $name   A string containing the field's tooltip
+     */
+    public function setTip($tip)
+    {
+        $this->tag->{'title'} = $tip;
     }
     
     /**

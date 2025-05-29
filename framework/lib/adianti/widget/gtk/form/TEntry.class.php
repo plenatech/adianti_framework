@@ -6,7 +6,7 @@
  * @package    widget_gtk
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TEntry extends GtkEntry
@@ -16,6 +16,8 @@ class TEntry extends GtkEntry
     private $chars;
     private $handler;
     private $validations;
+    protected $formName;
+    protected $exitAction;
     
     /**
      * Class Constructor
@@ -70,6 +72,36 @@ class TEntry extends GtkEntry
     }
     
     /**
+     * Define the name of the form to wich the button is attached
+     * @param $name    A string containing the name of the form
+     * @ignore-autocomplete on
+     */
+    public function setFormName($name)
+    {
+        $this->formName = $name;
+    }
+    
+    /**
+     * Define the action to be executed when the user leaves the form field
+     * @param $action TAction object
+     */
+    function setExitAction(TAction $action)
+    {
+        $this->exitAction = $action;
+        parent::connect_after('focus-out-event', array($this, 'onExecuteExitAction'));
+    }
+    
+    /**
+     * Execute the exit action
+     */
+    public function onExecuteExitAction()
+    {
+        $callback = $this->exitAction->getAction();
+        $param = (array) TForm::retrieveData($this->formName);
+        call_user_func($callback, $param);
+    }
+    
+    /**
      * Define the widget's size
      * @param $size Widget's size in pixels
      */
@@ -93,7 +125,10 @@ class TEntry extends GtkEntry
      */
     public function setMaxLength($length)
     {
-        parent::set_max_length($length);
+        if ($length > 0)
+        {
+            parent::set_max_length($length);
+        }
     }
     
     /**
@@ -293,6 +328,23 @@ class TEntry extends GtkEntry
         $completion->set_model($store);
         $completion->set_text_column(0);
         parent::set_completion($completion);
+    }
+    
+    /**
+     * Register a tip
+     * @param $text Tooltip Text
+     */
+    function setTip($text)
+    {
+        if (method_exists($this, 'set_tooltip_text'))
+        {
+            $this->set_tooltip_text($text);
+        }
+        else
+        {
+            $tooltip = TooltipSingleton::getInstance();
+            $tooltip->set_tip($this, $text);
+        }
     }
 }
 ?>

@@ -5,7 +5,7 @@
  * @version    1.0
  * @package    util
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TUIBuilder extends TPanel
@@ -85,6 +85,64 @@ class TUIBuilder extends TPanel
         $widget->setValue((string) $properties->{'value'});
         $widget->setMask((string) $properties->{'mask'});
         $widget->setSize((int) $properties->{'width'});
+        if (isset($properties->{'maxlen'})) // added later (not in the first version)
+        {
+            $widget->setMaxLength((int) $properties->{'maxlen'});
+        }
+        if (isset($properties->{'tip'})) // added later (not in the first version)
+        {
+            $widget->setTip((string) $properties->{'tip'});
+        }
+        
+        if (isset($properties->{'required'}) AND $properties->{'required'} == '1') // added later (not in the first version)
+        {
+            $widget->addValidation((string) $properties->{'name'}, new TRequiredValidator);
+        }
+        
+        $widget->setEditable((string) $properties->{'editable'});
+        $this->fields[] = $widget;
+        $this->fieldsByName[(string)$properties->{'name'}] = $widget;
+        
+        return $widget;
+    }
+    
+    /**
+     * 
+     */
+    public function makeTSpinner($properties)
+    {
+        $widget = new TSpinner((string) $properties->{'name'});
+        $widget->setRange((int) $properties->{'min'}, (int) $properties->{'max'}, (int) $properties->{'step'});
+        $widget->setValue((string) $properties->{'value'});
+        $widget->setSize((int) $properties->{'width'});
+        
+        if (isset($properties->{'tip'})) // added later (not in the first version)
+        {
+            $widget->setTip((string) $properties->{'tip'});
+        }
+        
+        $widget->setEditable((string) $properties->{'editable'});
+        $this->fields[] = $widget;
+        $this->fieldsByName[(string)$properties->{'name'}] = $widget;
+        
+        return $widget;
+    }
+    
+    /**
+     * 
+     */
+    public function makeTSlider($properties)
+    {
+        $widget = new TSlider((string) $properties->{'name'});
+        $widget->setRange((int) $properties->{'min'}, (int) $properties->{'max'}, (int) $properties->{'step'});
+        $widget->setValue((string) $properties->{'value'});
+        $widget->setSize((int) $properties->{'width'});
+        
+        if (isset($properties->{'tip'})) // added later (not in the first version)
+        {
+            $widget->setTip((string) $properties->{'tip'});
+        }
+        
         $widget->setEditable((string) $properties->{'editable'});
         $this->fields[] = $widget;
         $this->fieldsByName[(string)$properties->{'name'}] = $widget;
@@ -101,6 +159,17 @@ class TUIBuilder extends TPanel
         $widget->setValue((string) $properties->{'value'});
         $widget->setSize((int) $properties->{'width'});
         $widget->setEditable((string) $properties->{'editable'});
+        
+        if (isset($properties->{'tip'})) // added later (not in the first version)
+        {
+            $widget->setTip((string) $properties->{'tip'});
+        }
+        
+        if (isset($properties->{'required'}) AND $properties->{'required'} == '1') // added later (not in the first version)
+        {
+            $widget->addValidation((string) $properties->{'name'}, new TRequiredValidator);
+        }
+        
         $this->fields[] = $widget;
         $this->fieldsByName[(string) $properties->{'name'}] = $widget;
         
@@ -116,10 +185,22 @@ class TUIBuilder extends TPanel
         $widget->setValue((string) $properties->{'value'});
         $widget->setSize((int) $properties->{'width'});
         $widget->setEditable((string) $properties->{'editable'});
+        
         if ((string) $properties->{'mask'})
         {
             $widget->setMask((string) $properties->{'mask'});
         }
+        
+        if (isset($properties->{'tip'})) // added later (not in the first version)
+        {
+            $widget->setTip((string) $properties->{'tip'});
+        }
+        
+        if (isset($properties->{'required'}) AND $properties->{'required'} == '1') // added later (not in the first version)
+        {
+            $widget->addValidation((string) $properties->{'name'}, new TRequiredValidator);
+        }
+        
         $this->fields[] = $widget;
         $this->fieldsByName[(string) $properties->{'name'}] = $widget;
         
@@ -165,7 +246,14 @@ class TUIBuilder extends TPanel
      */
     public function makeTImage($properties)
     {
-        $widget = new TImage((string) $properties->{'image'});
+        if (file_exists((string) $properties->{'image'}))
+        {
+            $widget = new TImage((string) $properties->{'image'});
+        }
+        else
+        {
+            $widget = new TLabel((string) 'Image not found: ' . $properties->{'image'});
+        }
         
         return $widget;
     }
@@ -178,6 +266,17 @@ class TUIBuilder extends TPanel
         $widget = new TText((string) $properties->{'name'});
         $widget->setValue((string) $properties->{'value'});
         $widget->setSize((int) $properties->{'width'}, (int) $properties->{'height'});
+        
+        if (isset($properties->{'tip'})) // added later (not in the first version)
+        {
+            $widget->setTip((string) $properties->{'tip'});
+        }
+        
+        if (isset($properties->{'required'}) AND $properties->{'required'} == '1') // added later (not in the first version)
+        {
+            $widget->addValidation((string) $properties->{'name'}, new TRequiredValidator);
+        }
+        
         $this->fields[] = $widget;
         $this->fieldsByName[(string) $properties->{'name'}] = $widget;
         
@@ -206,6 +305,10 @@ class TUIBuilder extends TPanel
 	    {
 	        $widget->setValue(explode(',', (string) $properties->{'value'}));
 	    }
+        if (isset($properties->{'tip'})) // added later (not in the first version)
+        {
+            $widget->setTip((string) $properties->{'tip'});
+        }
 	    $this->fields[] = $widget;
 	    $this->fieldsByName[(string) $properties->{'name'}] = $widget;
 	    
@@ -223,6 +326,10 @@ class TUIBuilder extends TPanel
                                     (string) $properties->{'key'},
                                     (string) $properties->{'display'} );
         $widget->setLayout('vertical');
+        if (isset($properties->{'tip'})) // added later (not in the first version)
+        {
+            $widget->setTip((string) $properties->{'tip'});
+        }
 	    $this->fields[] = $widget;
 	    $this->fieldsByName[(string) $properties->{'name'}] = $widget;
 	    
@@ -248,6 +355,10 @@ class TUIBuilder extends TPanel
 	    }
 	    $widget->addItems($items);
 	    $widget->setValue((string) $properties->{'value'});
+        if (isset($properties->{'tip'})) // added later (not in the first version)
+        {
+            $widget->setTip((string) $properties->{'tip'});
+        }
 	    $this->fields[] = $widget;
 	    $this->fieldsByName[(string) $properties->{'name'}] = $widget;
 	    
@@ -265,6 +376,10 @@ class TUIBuilder extends TPanel
                                     (string) $properties->{'key'},
                                     (string) $properties->{'display'} );
         $widget->setLayout('vertical');
+        if (isset($properties->{'tip'})) // added later (not in the first version)
+        {
+            $widget->setTip((string) $properties->{'tip'});
+        }
 	    $this->fields[] = $widget;
 	    $this->fieldsByName[(string) $properties->{'name'}] = $widget;
 	    
@@ -292,6 +407,10 @@ class TUIBuilder extends TPanel
 	    {
 	        $widget->setValue((string) $properties->{'value'});
 	    }
+        if (isset($properties->{'tip'})) // added later (not in the first version)
+        {
+            $widget->setTip((string) $properties->{'tip'});
+        }
 	    $widget->setSize((int) $properties->{'width'});
 	    $this->fields[] = $widget;
 	    $this->fieldsByName[(string) $properties->{'name'}] = $widget;
@@ -310,6 +429,10 @@ class TUIBuilder extends TPanel
                                (string) $properties->{'key'},
                                (string) $properties->{'display'} );
 	    $widget->setSize((int) $properties->{'width'});
+        if (isset($properties->{'tip'})) // added later (not in the first version)
+        {
+            $widget->setTip((string) $properties->{'tip'});
+        }
 	    $this->fields[] = $widget;
 	    $this->fieldsByName[(string) $properties->{'name'}] = $widget;
 	    
@@ -517,6 +640,12 @@ class TUIBuilder extends TPanel
                         break;
                     case 'T'.'DataGrid':
                         $widget = $this->makeTDataGrid($properties);
+                        break;
+                    case 'T'.'Spinner':
+                        $widget = $this->makeTSpinner($properties);
+                        break;
+                    case 'T'.'Slider':
+                        $widget = $this->makeTSlider($properties);
                         break;
                 }
                 

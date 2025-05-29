@@ -5,7 +5,7 @@
  * @version    1.0
  * @package    database
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 final class TSqlSelect extends TSqlStatement
@@ -30,20 +30,24 @@ final class TSqlSelect extends TSqlStatement
         $conn = TTransaction::get();
         $driver = $conn->getAttribute(PDO::ATTR_DRIVER_NAME);
         
-        if (($driver == 'mssql') or ($driver == 'dblib'))
+        if (in_array($driver, array('mssql', 'dblib', 'sqlsrv')))
         {
-            return $this->getInstructionSqlServer();
+            return $this->getSqlServerInstruction();
+        }
+        if (in_array($driver, array('oci', 'oci8')))
+        {
+            return $this->getOracleInstruction();
         }
         else
         {
-            return $this->getInstructionStandard();
+            return $this->getStandardInstruction();
         }
     }
     
     /**
      * Returns the SELECT statement as an string for standard open source drivers
      */
-    public function getInstructionStandard()
+    public function getStandardInstruction()
     {
         // creates the SELECT instruction
         $this->sql  = 'SELECT ';
@@ -87,44 +91,126 @@ final class TSqlSelect extends TSqlStatement
     /**
      * Returns the SELECT statement as an string for mssql/dblib drivers
      */
-    public function getInstructionSqlServer()
+    public function getSqlServerInstruction()
     {
         // obtém a cláusula WHERE do objeto criteria.
         if ($this->criteria)
         {
             $expression = $this->criteria->dump();
             
-            if ($expression)
+            // obtém as propriedades do critério
+            $order    = $this->criteria->getProperty('order');
+            $limit    = (int) $this->criteria->getProperty('limit');
+            $offset   = (int) $this->criteria->getProperty('offset');
+            $direction= in_array($this->criteria->getProperty('direction'), array('asc', 'desc')) ? $this->criteria->getProperty('direction') : '';
+        }
+        $columns = implode(',', $this->columns);
+        
+        if ((isset($limit) OR isset($offset)) AND ($limit>0 OR $offset>0))
+        {
+            if (!$order)
             {
-                $sql_where = ' WHERE ' . $expression;
+                $order = 'id';
             }
+            $this->sql = "SELECT {$columns}
+                      FROM
+                      (
+                             SELECT ROW_NUMBER() OVER (order by {$order} {$direction}) AS __ROWNUMBER__,
+                             {$columns}
+                             FROM {$this->entity}";
+            if (!empty($expression))
+            {
+                $this->sql.= "    WHERE {$expression} ";
+            }
+            $this->sql .= " ) AS TAB2";
+            if ((isset($limit) OR isset($offset)) AND ($limit>0 OR $offset>0))
+            {
+                $this->sql .= " WHERE";
+            }
+            
+            if ($limit >0 )
+            {
+                $total = $offset + $limit;
+                $this->sql .= " __ROWNUMBER__ <= {$total} ";
+                
+                if ($offset)
+                {
+                    $this->sql .= " AND ";
+                }
+            }
+            if ($offset > 0)
+            {
+                $this->sql .= " __ROWNUMBER__ > {$offset} ";
+            }
+        }
+        else
+        {
+            $this->sql  = 'SELECT ';
+            $this->sql .= $columns;
+            $this->sql .= ' FROM ' . $this->entity;
+            if (!empty($expression))
+            {
+                $this->sql .= ' WHERE ' . $expression;
+            }
+            if (isset($order) AND !empty($order))
+            {
+                $this->sql .= ' ORDER BY ' . $order . ' ' . $direction;
+            }
+        }
+        return $this->sql;
+    }
+    
+    /**
+     * Returns the SELECT statement as an string for oci8 drivers
+     */
+    public function getOracleInstruction()
+    {
+        // obtém a cláusula WHERE do objeto criteria.
+        if ($this->criteria)
+        {
+            $expression = $this->criteria->dump();
             
             // obtém as propriedades do critério
             $order    = $this->criteria->getProperty('order');
             $limit    = (int) $this->criteria->getProperty('limit');
             $offset   = (int) $this->criteria->getProperty('offset');
             $direction= in_array($this->criteria->getProperty('direction'), array('asc', 'desc')) ? $this->criteria->getProperty('direction') : '';
+        }
+        $columns = implode(',', $this->columns);
+        
+        $basicsql  = 'SELECT ';
+        $basicsql .= $columns;
+        $basicsql .= ' FROM ' . $this->entity;
+        
+        if (!empty($expression))
+        {
+            $basicsql .= ' WHERE ' . $expression;
+        }
+        if (isset($order) AND !empty($order))
+        {
+            $basicsql .= ' ORDER BY ' . $order . ' ' . $direction;
+        }
+        
+        if ((isset($limit) OR isset($offset)) AND ($limit>0 OR $offset>0))
+        {
+            $this->sql = "SELECT {$columns} ";
+            $this->sql.= "  FROM (";
+            $this->sql.= "       SELECT rownum rnum, A.{$columns} FROM ({$basicsql}) A";
             
-            // obtém a ordenação do SELECT
-            if ($order)
+            if ($limit >0 )
             {
-                $sql_order = ' ORDER BY ' . $order . ' ' . $direction;
+                $total = $offset + $limit;
+                $this->sql .= " WHERE rownum <= {$total} ";
+            }
+            $this->sql.= ")";
+            if ($offset > 0)
+            {
+                $this->sql .= " WHERE rnum > {$offset} ";
             }
         }
-        $this->sql  = " SELECT " . implode(',', $this->columns) . " FROM {$this->entity} {$sql_where} {$sql_order}";
-        
-        if (isset($limit) and !isset($offset))
+        else
         {
-            $this->sql  = " SELECT TOP {$limit} " . implode(',', $this->columns) . " FROM {$this->entity} {$sql_where} {$sql_order}";
-        }
-        else if (isset($limit) and isset($offset))
-        {
-            $sum = $limit + $offset;
-            $select_top = " SELECT TOP {$sum} "   . implode(',', $this->columns) . ' FROM ' . $this->entity . " {$sql_where} ORDER BY 1 ASC";
-            $select_lim = " SELECT TOP {$limit} " . implode(',', $this->columns) . " FROM ({$select_top}) AS TAB ORDER BY 1 DESC";
-            
-            // monsta a instrução de SELECT
-            $this->sql  = " SELECT " . implode(',', $this->columns) . " FROM ({$select_lim}) AS TAB2 {$sql_order}";
+            $this->sql = $basicsql;
         }
         
         return $this->sql;

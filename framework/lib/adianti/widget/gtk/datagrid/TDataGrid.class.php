@@ -6,7 +6,7 @@
  * @package    widget_gtk
  * @subpackage datagrid
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TDataGrid extends GtkVBox
@@ -17,6 +17,7 @@ class TDataGrid extends GtkVBox
     private $width;
     private $action_area;
     private $pageNavigation;
+    private $clickhandler;
     
     /**
      * Class Constructor
@@ -34,13 +35,21 @@ class TDataGrid extends GtkVBox
         $scroll = new GtkScrolledWindow;
         $scroll->add($this->view);
         
-        $this->view->connect_simple('row-activated', array($this, 'onDoubleClick'));
+        $this->handler = $this->view->connect_simple('row-activated', array($this, 'onDoubleClick'));
         
         $this->action_area = new GtkHButtonBox;
         $this->action_area->set_layout(Gtk::BUTTONBOX_START);
         parent::pack_start($scroll, true, true);
         parent::pack_start($this->action_area, false, false);
         parent::set_size_request(-1,200);
+    }
+    
+    /**
+     * disable the default click action
+     */
+    public function disableDefaultClick()
+    {
+        $this->view->disconnect($this->handler);
     }
     
     /**
@@ -165,13 +174,52 @@ class TDataGrid extends GtkVBox
     }
     
     /**
+     * Execute an edit action
+     * @param $action    Callback to be executed
+     * @param $parameter User parameters
+     * @ignore-autocomplete on
+     */
+    function onExecuteEditAction($cell_renderer, $linha, $content, $column)
+    {
+        $parameters = $column->getEditAction()->getParameters();
+        
+        $selection = $this->view->get_selection();
+        if ($selection)
+        {
+            list($model, $iter) = $selection->get_selected();
+            if ($iter)
+            {
+                $activeObject = $this->model->get_value($iter, $this->count);
+                $field = $column->getEditAction()->getField();
+                
+                $parameters['field'] = $column->getName();
+                $parameters['key']   = $activeObject->{$field};
+                $parameters['value'] = $content;
+                
+                call_user_func($column->getEditAction()->getAction(), $parameters);
+            }
+        }
+    }
+    
+    /**
      * Creates the DataGrid Structure
      */
     public function createModel()
     {
+        // the last iter is the object itself
         $this->types[] = GObject::TYPE_PHP_VALUE;
         $this->model->set_column_types($this->types);
         $this->view->set_model($this->model);
+        
+        foreach ($this->columns as $column)
+        {
+            if ($column->getEditAction())
+            {
+                $renderer = $column->getRenderer();
+                $renderer->set_property('editable', TRUE);
+                $renderer->connect("edited", array($this, 'onExecuteEditAction'), $column);
+            }
+        }
     }
     
     /**
@@ -196,6 +244,7 @@ class TDataGrid extends GtkVBox
             $this->model->set($iter, $indice, (string) $cell);
             $indice ++;
         }
+        // the last iter is the object itself
         $this->model->set($iter, $indice, $object);
         $this->objects ++;
     }

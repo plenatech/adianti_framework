@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage general
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TAction
@@ -40,6 +40,14 @@ class TAction
     public function getParameter($param)
     {
         return $this->param[$param];
+    }
+    
+    /**
+     * Return the Action Parameters
+     */
+    public function getParameters()
+    {
+        return $this->param;
     }
     
     /**
@@ -80,17 +88,6 @@ class TAction
         if ($format_action)
         {
             return 'index.php?'.http_build_query($url);
-            /*
-            if (isset($_REQUEST['isajax']) AND $_REQUEST['isajax'] == '1') // create ajax flag
-            {
-                $url_str = http_build_query($url);
-                return "javascript:__adianti_load_page('engine.php?{$url_str}')";
-            }
-            else
-            {
-                return "document.location='?" . http_build_query($url)."'";
-            }
-            */
         }
         else
         {

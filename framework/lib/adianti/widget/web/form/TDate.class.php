@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TDate extends TEntry
@@ -32,36 +32,6 @@ class TDate extends TEntry
         $newmask = str_replace('mm',   '99',   $newmask);
         $newmask = str_replace('yyyy', '9999', $newmask);
         parent::setMask($newmask);
-    }
-    
-    /**
-     * Shows the widget at the screen
-     */
-    public function show()
-    {
-        // include the third part libraries
-        TPage::include_js('lib/jquery/jquery.ui.datepicker.min.js');
-        TPage::include_js('lib/jquery/i18n/jquery.ui.datepicker-pt-BR.js');
-        TPage::include_css('lib/jquery/themes/base-custom/jquery.ui.all.css');
-        $js_mask = str_replace('yyyy', 'yy', $this->mask);
-        
-        $script = new TElement('script');
-        $script-> type = 'text/javascript';
-        $script->add("
-    		$(function() {
-    	    $(\"#{$this->id}\").datepicker({
-    	        showOn: 'button',
-    	        buttonImage: 'lib/adianti/images/tdate.png',
-    	        buttonImageOnly: true,    
-    			changeMonth: true,
-    			changeYear: true,
-    			dateFormat: '{$js_mask}',
-    			showButtonPanel: true
-    		});
-    	});");
-		$script->show();
-		
-        parent::show();
     }
     
     /**
@@ -108,6 +78,35 @@ class TDate extends TEntry
             $day  = substr($date,8,4);
             return "{$day}/{$mon}/{$year}";
         }
+    }
+    
+    /**
+     * Shows the widget at the screen
+     */
+    public function show()
+    {
+        $js_mask = str_replace('yyyy', 'yy', $this->mask);
+        
+        if (parent::getEditable())
+        {
+            $script = new TElement('script');
+            $script-> type = 'text/javascript';
+            $script->add("
+            	$(function() {
+                $(\"#{$this->id}\").datepicker({
+                    showOn: 'button',
+                    buttonImage: 'lib/adianti/images/tdate.png',
+                    buttonImageOnly: true,    
+            		changeMonth: true,
+            		changeYear: true,
+            		dateFormat: '{$js_mask}',
+            		showButtonPanel: true
+            	});
+            });");
+            $script->show();
+        }
+		
+        parent::show();
     }
 }
 ?>

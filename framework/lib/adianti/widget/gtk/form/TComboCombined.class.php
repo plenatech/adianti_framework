@@ -6,7 +6,7 @@
  * @package    widget_gtk
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TComboCombined extends GtkHbox
@@ -15,6 +15,7 @@ class TComboCombined extends GtkHbox
     private $entry;
     private $model;
     private $iters;
+    protected $formName;
     
     /**
      * Class Constructor
@@ -129,6 +130,16 @@ class TComboCombined extends GtkHbox
             $valor = $model->get_value($iter, 1);
             return $valor;
         }
+    }
+    
+    /**
+     * Define the name of the form to wich the button is attached
+     * @param $name    A string containing the name of the form
+     * @ignore-autocomplete on
+     */
+    public function setFormName($name)
+    {
+        $this->formName = $name;
     }
     
     /**

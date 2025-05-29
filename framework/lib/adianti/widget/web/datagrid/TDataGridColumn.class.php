@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage datagrid
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TDataGridColumn
@@ -16,6 +16,7 @@ class TDataGridColumn
     private $align;
     private $width;
     private $action;
+    private $editaction;
     private $transformer;
     
     /**
@@ -95,6 +96,30 @@ class TDataGridColumn
         if ($this->action)
         {
             return $this->action->serialize();
+        }
+    }
+    
+    /**
+     * Define the action to be executed when
+     * the user clicks do edit the column
+     * @param $action   A TDataGridAction object
+     */
+    public function setEditAction(TDataGridAction $editaction)
+    {
+        $this->editaction = $editaction;
+    }
+    
+    /**
+     * Returns the action defined by setEditAction() method
+     * @return the action to be executed when the
+     * user clicks do edit the column
+     */
+    public function getEditAction()
+    {
+        // verify if the column has an actions
+        if ($this->editaction)
+        {
+            return $this->editaction;
         }
     }
     

@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage general
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TMenuBar extends TElement
@@ -24,9 +24,7 @@ class TMenuBar extends TElement
      */
     public static function newFromXML($xml_file)
     {
-        TPage::include_css('lib/bootstrap/css/bootstrap-buttons.css');
-        TPage::include_js('lib/bootstrap/js/bootstrap-dropdown.js');
-        
+        //TPage::include_js('lib/bootstrap/js/bootstrap-dropdown.js');
         if (file_exists($xml_file))
         {
             $menu_string = file_get_contents($xml_file);
@@ -68,6 +66,21 @@ class TMenuBar extends TElement
             
             return $menubar;
         }
+    }
+    
+    /**
+     * Show
+     */
+    public function show()
+    {
+    	$script = new TElement('script');
+    	$script->{'type'} = 'text/javascript';
+    	$code = '$(document).ready( function() {
+                     $(\'.dropdown-toggle\').dropdown()
+                 });';
+        $script->add($code);
+        $script->show();
+        parent::show();
     }
 }
 ?>

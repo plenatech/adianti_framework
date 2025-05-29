@@ -6,14 +6,32 @@
  * @package    widget_web
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TSeekButton extends TEntry
 {
     private $action;
     private $auxiliar;
-    private $formName;
+    private $useOutEvent;
+    
+    /**
+     * Class Constructor
+     * @param  $name name of the field
+     */
+    public function __construct($name)
+    {
+        parent::__construct($name);
+        $this->useOutEvent = TRUE;
+    }
+    
+    /**
+     * Define it the out event will be fired
+     */
+    public function setUseOutEvent($bool)
+    {
+        $this->useOutEvent = $bool;
+    }
     
     /**
      * Define the action for the SeekButton
@@ -35,16 +53,6 @@ class TSeekButton extends TEntry
     }
     
     /**
-     * Define the name of the form to wich the button is attached
-     * @param $name    A string containing the name of the form
-     * @ignore-autocomplete on
-     */
-    public function setFormName($name)
-    {
-        $this->formName = $name;
-    }
-    
-    /**
      * Show the widget
      */
     public function show()
@@ -52,8 +60,6 @@ class TSeekButton extends TEntry
         // check if it's not editable
         if (parent::getEditable())
         {
-            TPage::include_js('lib/sack/sack.js');
-            TPage::include_js('lib/adianti/include/lookup.js');
             $serialized_action = '';
             if ($this->action)
             {
@@ -74,8 +80,11 @@ class TSeekButton extends TEntry
                         $ajaxAction->setParameter('receive_field', $this->action->getParameter('receive_field'));
                     }
                     $string_action = $ajaxAction->serialize(FALSE);
-                    $this->setProperty('onBlur', "serialform=(\$('#{$this->formName}').serialize());
-                                                  ajaxLookup('$string_action&'+serialform, this)");
+                    if ($this->useOutEvent)
+                    {
+                        $this->setProperty('onBlur', "serialform=(\$('#{$this->formName}').serialize());
+                                                      ajaxLookup('$string_action&'+serialform, this)");
+                    }
                 }
                 $serialized_action = $this->action->serialize(FALSE);
             }
@@ -87,7 +96,7 @@ class TSeekButton extends TEntry
             $link-> onmouseover = 'style.cursor = \'pointer\'';
             $link-> onmouseout  = 'style.cursor = \'default\'';
             $link-> onclick = "javascript:serialform=(\$('#{$this->formName}').serialize());
-                  __adianti_append_page('engine.php?{$serialized_action}&'+serialform+'&encoding=utf8')";
+                  __adianti_append_page('engine.php?{$serialized_action}&'+serialform)";
             $link->add($image);
             $link->show();
             

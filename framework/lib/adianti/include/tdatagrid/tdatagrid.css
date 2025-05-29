@@ -1,7 +1,8 @@
 .tdatagrid_table
 {
     border-collapse : separate;
-    border          : 1px solid gray;
+    border-top      : 1px solid gray;
+    border-left    : 1px solid gray;
     font-family     : sans-serif,arial,verdana;
     font-size       : 10pt;
     color           : #171717;
@@ -11,26 +12,30 @@
 .tdatagrid_col
 {
     font-size      : 10pt;
-    font-weight    : bold;
     border-left    : 1px solid white;
-    border-top     : 2px solid #FAFAFA;
+    border-top     : 1px solid #FAFAFA;
     border-right   : 1px solid gray;
     border-bottom  : 1px solid gray;
     padding-top    : 1px;
     background-color: #DBDBDB;
-    color           : #333333;
+    color           : #000000;
     -moz-user-select:none;
     user-select     : none;
     cursor          : default;
     text-shadow     : 0 1px 0 #FFFFFF;
 }
 
+.tdatagrid_cell
+{
+    border-right: 1px solid #c7c7c7;
+    border-bottom: 1px solid #c7c7c7;
+}
+
 .tdatagrid_col_over
 {
     font-size      : 10pt;
-    font-weight    : bold;
     border-left    : 1px solid white;
-    border-top     : 2px solid orange;
+    border-top     : 1px solid orange;
     border-right   : 1px solid gray;
     border-bottom  : 1px solid gray;
     padding-top    : 0px;

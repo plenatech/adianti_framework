@@ -2,6 +2,9 @@
 include_once 'lib/adianti/util/TAdiantiLoader.class.php';
 spl_autoload_register(array('TAdiantiLoader', 'autoload_gtk'));
 
+/**
+ * TApplication Gtk Wrapper
+ */
 class TApplication extends GtkWindow
 {
     const APP_TITLE = 'Adianti Framework :: Samples';
@@ -9,15 +12,19 @@ class TApplication extends GtkWindow
     private $content;
     private $classname;
     
+    /**
+     * Constructor Method
+     */
     function __construct()
     {
         parent::__construct();
-        parent::set_size_request(820,640);
+        parent::set_size_request(840,640);
         parent::set_position(GTK::WIN_POS_CENTER);
         parent::connect_simple('delete-event', array($this, 'onClose'));
         parent::connect_simple('destroy', array('Gtk', 'main_quit'));
         parent::set_title(self::APP_TITLE);
         parent::set_icon(GdkPixbuf::new_from_file('favicon.png'));
+        
         $gtk = GtkSettings::get_default();
         $gtk->set_long_property("gtk-button-images", TRUE, 0);
         $gtk->set_long_property("gtk-menu-images", TRUE, 0);
@@ -28,16 +35,20 @@ class TApplication extends GtkWindow
         $lang = $ini['language'];
         TAdiantiCoreTranslator::setLanguage($lang);
         TApplicationTranslator::setLanguage($lang);
+        date_default_timezone_set($ini['timezone']);
         
         $this->content = new GtkFixed;
 
         $vbox = new GtkVBox;
         parent::add($vbox);
+        
         $vbox->pack_start(GtkImage::new_from_file('app/images/pageheader-gtk.png'), false, false);
         
         $MenuBar = TMenuBar::newFromXML('menu.xml');
+        
         $vbox->pack_start($MenuBar, false, false);
         $vbox->pack_start($this->content, true, true);
+        
         parent::show_all();
     }
     
@@ -49,33 +60,34 @@ class TApplication extends GtkWindow
     {
         if (class_exists($class))
         {
-            if ($children = $this->content->get_children())
-            {
-                foreach ($children as $child)
-                {
-                    $this->content->remove($child);
-                }
-            }
-
             $object = new $class;
-            $this->classname = $class;
-            $object->show(); // the container's show method is important (ex: it calls onReload())
-            $object->hide();
             
-            $child = $object->get_child();
-            if ($child instanceof GtkWidget)
+            if ($object instanceof TPage)
             {
-                $object->remove($child);
-                $this->content->put($child, 5, 5);
-                $child->show();
-                $child->show_all();
+                if ($children = $this->content->get_children())
+                {
+                    foreach ($children as $child)
+                    {
+                        $this->content->remove($child);
+                    }
+                }
+                
+                $this->classname = $class;
+                $this->content->put($object, 5, 5);
+                $object->show();
+                return $object;
             }
-            return $object;
+            else
+            {
+                $object->show();
+                return $object;
+            }
         }
     }
     
     /**
      * Execute a specific method of a class with parameters
+     *
      * @param $class class name
      * @param $method method name
      * @param $parameters array of parameters
@@ -91,12 +103,13 @@ class TApplication extends GtkWindow
     }
     
     /**
-     * Called when the user closes the main window
+     * on close the main window
      */
     function onClose()
     {
         $dialog = new GtkMessageDialog(null, Gtk::DIALOG_MODAL, Gtk::MESSAGE_QUESTION,
                                              Gtk::BUTTONS_YES_NO, 'Close the window ?');
+        $dialog->set_position(GTK::WIN_POS_CENTER);
         $response = $dialog->run();
         if ($response == Gtk::RESPONSE_YES)
         {
@@ -118,10 +131,9 @@ class TApplication extends GtkWindow
         return self::$inst;
     }
 }
-define('OS', strtoupper(substr(PHP_OS, 0, 3)));
 ini_set('php-gtk.codepage', 'UTF8');
-
 $app = new TApplication;
+
 try
 {
     Gtk::Main();

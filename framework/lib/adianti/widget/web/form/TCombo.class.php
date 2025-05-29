@@ -6,12 +6,14 @@
  * @package    widget_web
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TCombo extends TField
 {
     protected $items; // array containing the combobox options
+    private   $changeaction;
+    private   $id;
     
     /**
      * Class Constructor
@@ -21,19 +23,9 @@ class TCombo extends TField
     {
         // executes the parent class constructor
         parent::__construct($name);
+        $this->id   = 'tcombo_'.uniqid();
         
-        // creates the default field style
-        $style1 = new TStyle('tcombo');
-        /*
-        $style1-> border                = 'solid';
-        $style1-> border_color          = '#a0a0a0';
-        $style1-> border_width          = '1px';
-        $style1-> _webkit_border_radius = '3px';
-        $style1-> _moz_border_radius    = '3px';
-        */
-        $style1-> height                = '24px';
-        $style1-> z_index               = '1';
-        $style1->show();
+        TPage::include_css('lib/adianti/include/tcombo/tcombo.css');
         
         // creates a <select> tag
         $this->tag = new TElement('select');
@@ -82,6 +74,38 @@ class TCombo extends TField
     }
     
     /**
+     * Define the action to be executed when the user changes the combo
+     * @param $action TAction object
+     */
+    public function setChangeAction(TAction $action)
+    {
+        $this->changeaction = $action;
+    }
+    
+    /**
+     * Reload combobox items after it is already shown
+     * @param $formname form name (used in gtk version)
+     * @param $name field name
+     * @param $items array with items
+     */
+    public static function reload($formname, $name, $items)
+    {
+        $script = new TElement('script');
+        $script->{'language'} = 'JavaScript';
+        $script->setUseSingleQuotes(TRUE);
+        $script->setUseLineBreaks(FALSE);
+        $code = '$(function() {';
+        $code .= '$(\'select[name="'.$name.'"]\').html("");';
+        foreach ($items as $key => $value)
+        {
+            $code .= '$("<option value=\''.$key.'\'>'.$value.'</option>").appendTo(\'select[name="'.$name.'"]\');';
+        }
+        $code.= '});';
+        $script->add($code);
+        $script->show();
+    }
+    
+    /**
      * Shows the widget
      */
     public function show()
@@ -102,28 +126,50 @@ class TCombo extends TField
             // iterate the combobox items
             foreach ($this->items as $chave => $item)
             {
-                // creates an <option> tag
-                $option = new TElement('option');
-                $option-> value = $chave;  // define the index
-                $option->add($item);      // add the item label
-                
                 if (substr($chave, 0, 3) == '>>>')
                 {
-                    $option-> disabled = 1;
+                    $optgroup = new TElement('optgroup');
+                    $optgroup-> label = $item;
+                    // add the option to the combo
+                    $this->tag->add($optgroup);
                 }
-                // verify if this option is selected
-                if (($chave == $this->value) AND ($this->value !== NULL))
+                else
                 {
-                    // mark as selected
-                    $option-> selected = 1;
+                    // creates an <option> tag
+                    $option = new TElement('option');
+                    $option-> value = $chave;  // define the index
+                    $option->add($item);      // add the item label
+                    
+                    // verify if this option is selected
+                    if (($chave == $this->value) AND ($this->value !== NULL))
+                    {
+                        // mark as selected
+                        $option-> selected = 1;
+                    }
+                    
+                    if (isset($optgroup))
+                    {
+                        $optgroup->add($option);
+                    }
+                    else
+                    {
+                        $this->tag->add($option);
+                    }                    
                 }
-                // add the option to the combo
-                $this->tag->add($option);
             }
         }
         
         // verify whether the widget is editable
-        if (!parent::getEditable())
+        if (parent::getEditable())
+        {
+            if (isset($this->changeaction))
+            {
+                $string_action = $this->changeaction->serialize(FALSE);
+                $this->setProperty('onChange', "serialform=(\$('#{$this->formName}').serialize());
+                                              ajaxLookup('$string_action&'+serialform, this)");
+            }
+        }
+        else
         {
             // make the widget read-only
             $this->tag-> readonly = "1";

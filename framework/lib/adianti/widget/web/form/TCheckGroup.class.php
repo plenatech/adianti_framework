@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TCheckGroup extends TField
@@ -59,6 +59,7 @@ class TCheckGroup extends TField
             {
                 // instantiates a new CheckButton
                 $button = new TCheckButton("{$this->name}[]");
+                $button->setTip($this->tag->title);
                 $button->setIndexValue($index);
                 $button->setProperty('checkgroup', $this->name);
                 

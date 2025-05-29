@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage general
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TMenuItem extends TElement
@@ -51,9 +51,10 @@ class TMenuItem extends TElement
         
         if ($this->action)
         {
-            $url['class'] = $this->action;
-            $url_str = http_build_query($url);
-            $link-> href = "index.php?{$url_str}";
+            //$url['class'] = $this->action;
+            //$url_str = http_build_query($url);
+            $action = str_replace('#', '&', $this->action);
+            $link-> href = "index.php?class={$action}";
             $link-> generator = 'adianti';
         }
         else

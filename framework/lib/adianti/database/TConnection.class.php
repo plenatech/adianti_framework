@@ -5,7 +5,7 @@
  * @version    1.0
  * @package    database
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 final class TConnection
@@ -61,16 +61,21 @@ final class TConnection
                 break;
             case 'sqlite':
                 $conn = new PDO("sqlite:{$name}");
+                $conn->query('PRAGMA foreign_keys = ON'); // referential integrity must be enabled
                 break;
             case 'ibase':
                 $name = isset($host) ? "{$host}:{$name}" : $name;
                 $conn = new PDO("firebird:dbname={$name}", $user, $pass);
                 break;
-            case 'oci8':
-                $conn = new PDO("oci:dbname={$name}", $user, $pass);
+            case 'oracle':
+                $port = $port ? $port : '1521';
+                $conn = new PDO("oci:dbname={$host}:{$port}/{$name}", $user, $pass);
                 break;
             case 'mssql':
-                $conn = new PDO("mssql:host={$host},1433;dbname={$name}", $user, $pass);
+                if (OS == 'WIN')
+                    $conn = new PDO("sqlsrv:Server={$host};Database={$name}", $user, $pass);
+                else
+                    $conn = new PDO("dblib:host={$host};dbname={$name}", $user, $pass);
                 break;
             case 'dblib':
                 $conn = new PDO("dblib:host={$host},1433;dbname={$name}", $user, $pass);

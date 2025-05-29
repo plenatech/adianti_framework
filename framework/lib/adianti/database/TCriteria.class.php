@@ -5,7 +5,7 @@
  * @version    1.0
  * @package    database
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TCriteria extends TExpression
@@ -110,7 +110,6 @@ class TCriteria extends TExpression
         $this->properties['offset']    = isset($properties['offset']) ? (int) $properties['offset'] : 0;
         $this->properties['direction'] = isset($properties['direction']) ? $properties['direction'] : '';
     }
-    
     
     /**
      * Return a Criteria property

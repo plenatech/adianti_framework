@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage datagrid
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TDataGrid extends TTable
@@ -16,6 +16,7 @@ class TDataGrid extends TTable
     private $rowcount;
     private $modelCreated;
     private $pageNavigation;
+    private $defaultClick;
     
     /**
      * Class Constructor
@@ -24,9 +25,18 @@ class TDataGrid extends TTable
     {
         parent::__construct();
         $this->modelCreated = FALSE;
+        $this->defaultClick = TRUE;
         
         $this->{'class'} = 'tdatagrid_table';
         $this-> id    = 'tdatagrid_table';
+    }
+    
+    /**
+     * disable the default click action
+     */
+    public function disableDefaultClick()
+    {
+        $this->defaultClick = FALSE;
     }
     
     /**
@@ -98,9 +108,9 @@ class TDataGrid extends TTable
         {
             foreach ($this->actions as $action)
             {
-                $celula = $row->addCell('&nbsp;');
-                $celula->{'class'} = 'tdatagrid_col';
-                $celula-> width = '16px';
+                $cell = $row->addCell('&nbsp;');
+                $cell->{'class'} = 'tdatagrid_col';
+                $cell-> width = '16px';
             }
         }
         
@@ -123,23 +133,23 @@ class TDataGrid extends TTable
                     }
                 }
                 // add a cell with the columns label
-                $celula = $row->addCell($label);
+                $cell = $row->addCell($label);
                 
-                $celula->{'class'} = 'tdatagrid_col';
-                $celula-> align = $align;
+                $cell->{'class'} = 'tdatagrid_col';
+                $cell-> align = $align;
                 if ($width)
                 {
-                    $celula-> width = $width.'px';
+                    $cell-> width = $width.'px';
                 }
                 
                 // verify if the column has an attached action
                 if ($column->getAction())
                 {
                     $url = $column->getAction();
-                    $celula-> onmouseover = "this.className='tdatagrid_col_over';";
-                    $celula-> onmouseout  = "this.className='tdatagrid_col'";
-                    $celula-> href        = $url;
-                    $celula-> generator   = 'adianti';
+                    $cell-> onmouseover = "this.className='tdatagrid_col_over';";
+                    $cell-> onmouseout  = "this.className='tdatagrid_col'";
+                    $cell-> href        = $url;
+                    $cell-> generator   = 'adianti';
                 }
             }
         }
@@ -212,7 +222,8 @@ class TDataGrid extends TTable
                         $link->add($label);
                     }
                     // add the cell to the row
-                    $row->addCell($link);
+                    $cell = $row->addCell($link);
+                    $cell->{'class'} = 'tdatagrid_cell';
                 }
             }
             if ($this->columns)
@@ -232,25 +243,44 @@ class TDataGrid extends TTable
                         // apply the transformer functions over the data
                         $data = call_user_func($function, $data);
                     }
-                    // add the cell to the row
-                    $celula = $row->addCell('&nbsp;'.$data.'&nbsp;');
-                    $celula-> align = $align;
-                    if ($width)
+                    
+                    if ($editaction = $column->getEditAction())
                     {
-                        $celula-> width = $width.'px';
+                        $editaction_field = $editaction->getField();
+                        $div = new TElement('div');
+                        $div->{'class'}  = 'inlineediting';
+                        $div->{'style'}  = 'padding-left:5px;padding-right:5px';
+                        $div->{'action'} = $editaction->serialize();
+                        $div->{'field'}  = $name;
+                        $div->{'key'}    = $object->{$editaction_field};
+                        $div->add($data);
+                        $cell = $row->addCell($div);
+                        $cell->{'class'} = 'tdatagrid_cell';
+                    }
+                    else
+                    {
+                        // add the cell to the row
+                        $cell = $row->addCell($data);
+                        $cell->{'class'} = 'tdatagrid_cell';
+                        $cell-> align = $align;
+                        $cell->{'style'} = 'padding-left:5px;padding-right:5px';
+                        if (isset($first_url) AND $this->defaultClick)
+                        {
+                            $cell-> href      = $first_url;
+                            $cell-> generator = 'adianti';
+                        }
                     }
                     
-                    if (isset($first_url))
+                    if ($width)
                     {
-                        $celula-> href      = $first_url;
-                        $celula-> generator = 'adianti';
+                        $cell-> width = $width.'px';
                     }
                 }
             }
             
             // when the mouse is over the datagrid row
-            $row-> onmouseover = "className='tdatagrid_row_sel'; style.cursor='pointer'";
-            $row-> onmouseout  = "className='{$classname}';";
+             $row-> onmouseover = "className='tdatagrid_row_sel'; style.cursor='pointer'";
+             $row-> onmouseout  = "className='{$classname}';";
             
             // increments the row counter
             $this->rowcount ++;
@@ -290,8 +320,30 @@ class TDataGrid extends TTable
     function show()
     {
         TPage::include_css('lib/adianti/include/tdatagrid/tdatagrid.css');
-        // shows the table
+        // shows the datagrid
         parent::show();
+        
+        $params = $_REQUEST;
+        unset($params['class']);
+        unset($params['method']);
+        // to keep browsing parameters (order, page, first_page, ...)
+        $urlparams='&'.http_build_query($params);
+        
+        // inline editing treatment
+        $script = new TElement('script');
+        $script->add('$(function() {
+        	$(".inlineediting").editInPlace({
+        		callback: function(unused, enteredText)
+        		{
+        		    __adianti_load_page($(this).attr("action")+"'.$urlparams.'&key="+$(this).attr("key")+"&field="+$(this).attr("field")+"&value="+encodeURIComponent(enteredText));
+        		    return enteredText;
+        		},
+        		show_buttons: false,
+        		text_size:20,
+        		params:column=name
+    	    });
+        });');
+        $script->show();
     }
     
     /**

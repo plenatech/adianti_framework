@@ -5,7 +5,7 @@
  * @version    1.0
  * @package    database
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 abstract class TRecord
@@ -32,7 +32,7 @@ abstract class TRecord
             }
             else
             {
-                throw new Exception(TAdiantiCoreTranslator::translate('Object not found'));
+                throw new Exception(TAdiantiCoreTranslator::translate('Object ^1 not found in ^2', $id, constant(get_class($this).'::TABLENAME')));
             }
         }
     }
@@ -288,7 +288,7 @@ abstract class TRecord
         else
         {
             // if there's no active transaction opened
-            throw new Exception(TAdiantiCoreTranslator::translate('No active transactions'));
+            throw new Exception(TAdiantiCoreTranslator::translate('No active transactions') . ': ' . __METHOD__ .' '. $this->getEntity());
         }
     }
     
@@ -341,7 +341,7 @@ abstract class TRecord
         else
         {
             // if there's no active transaction opened
-            throw new Exception(TAdiantiCoreTranslator::translate('No active transactions'));
+            throw new Exception(TAdiantiCoreTranslator::translate('No active transactions') . ': ' . __METHOD__ .' '. $this->getEntity());
         }
     }
     
@@ -378,7 +378,7 @@ abstract class TRecord
         else
         {
             // if there's no active transaction opened
-            throw new Exception(TAdiantiCoreTranslator::translate('No active transactions'));
+            throw new Exception(TAdiantiCoreTranslator::translate('No active transactions') . ': ' . __METHOD__ .' '. $this->getEntity());
         }
     }
     
@@ -408,7 +408,7 @@ abstract class TRecord
         else
         {
             // if there's no active transaction opened
-            throw new Exception(TAdiantiCoreTranslator::translate('No active transactions'));
+            throw new Exception(TAdiantiCoreTranslator::translate('No active transactions') . ': ' . __METHOD__ .' '. $this->getEntity());
         }
     }
 }

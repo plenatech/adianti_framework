@@ -6,7 +6,7 @@
  * @package    widget_gtk
  * @subpackage container
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TTable extends GtkTable
@@ -54,6 +54,10 @@ class TTable extends GtkTable
                             $properties = $column->getProperties();
                             $properties['colspan'] = isset($properties['colspan']) ? $properties['colspan'] -1 : 0;
                             $hbox=new GtkHBox;
+                            if (isset($properties['width']))
+                            {
+                                $hbox->set_size_request($properties['width'],-1);
+                            }
                             $hbox->set_border_width(1);
                             $hbox->pack_start($column->getContent(), false, false);
                             $column->getContent()->show();

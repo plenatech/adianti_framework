@@ -6,7 +6,7 @@
  * @package    widget_web
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class THtmlEditor extends TField
@@ -49,9 +49,6 @@ class THtmlEditor extends TField
      */
     public function show()
     {
-        TPage::include_js('lib/jquery/jquery.cleditor.min.js');
-        TPage::include_css('lib/jquery/jquery.cleditor.css');
-
         // check if the field is not editable
         if (parent::getEditable())
         {

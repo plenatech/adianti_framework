@@ -6,7 +6,7 @@
  * @package    widget_gtk
  * @subpackage form
  * @author     Pablo Dall'Oglio
- * @copyright  Copyright (c) 2006-2012 Adianti Solutions Ltd. (http://www.adianti.com.br)
+ * @copyright  Copyright (c) 2006-2013 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
 class TSeekButton extends GtkHBox
@@ -16,6 +16,8 @@ class TSeekButton extends GtkHBox
     private $entry;
     private $btn;
     private $validations;
+    private $useOutEvent;
+    protected $formName;
     
     /**
      * Class Constructor
@@ -30,10 +32,19 @@ class TSeekButton extends GtkHBox
         $this->btn->set_image(new TImage('lib/adianti/images/ico_find.png'));
         $this->btn->set_relief(Gtk::RELIEF_NONE);
         
+        $this->useOutEvent = TRUE;
         $this->validations = array();
         
         parent::pack_start($this->entry, false, false);
         parent::pack_start($this->btn, false, false);
+    }
+    
+    /**
+     * Define it the out event will be fired
+     */
+    public function setUseOutEvent($bool)
+    {
+        $this->useOutEvent = $bool;
     }
     
     /**
@@ -60,8 +71,11 @@ class TSeekButton extends GtkHBox
             }
         }
         
-        // get_text aqui não é on-the-fly, tem que chamar um método na hora do evento
-        $this->entry->connect_simple('focus-out-event', array($this, 'onBlur'), $callback, $param);
+        if ($this->useOutEvent)
+        {
+            // get_text aqui não é on-the-fly, tem que chamar um método na hora do evento
+            $this->entry->connect_simple('focus-out-event', array($this, 'onBlur'), $callback, $param);
+        }
     }
     
     /**
@@ -123,6 +137,16 @@ class TSeekButton extends GtkHBox
     public function getValue()
     {
         return $this->entry->get_text();
+    }
+    
+    /**
+     * Define the name of the form to wich the button is attached
+     * @param $name    A string containing the name of the form
+     * @ignore-autocomplete on
+     */
+    public function setFormName($name)
+    {
+        $this->formName = $name;
     }
     
     /**
