@@ -11,11 +11,12 @@ use Adianti\Widget\Util\TImage;
 use Adianti\Widget\Base\TElement;
 use Adianti\Widget\Base\TScript;
 use Exception;
+use stdClass;
 
 /**
  * Create a field list
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -25,13 +26,25 @@ use Exception;
 class TFieldList extends TTable
 {
     private $fields;
+    private $labels;
     private $body_created;
     private $detail_row;
     private $remove_function;
+    private $remove_action;
     private $clone_function;
     private $sort_action;
     private $sorting;
     private $fields_properties;
+    private $row_functions;
+    private $row_actions;
+    private $automatic_aria;
+    private $summarize;
+    private $totals;
+    private $total_functions;
+    private $remove_enabled;
+    private $remove_icon;
+    private $remove_title;
+    private $field_prefix;
     
     /**
      * Class Constructor
@@ -44,11 +57,89 @@ class TFieldList extends TTable
         
         $this->fields = [];
         $this->fields_properties = [];
+        $this->row_functions = [];
+        $this->row_actions = [];
         $this->body_created = false;
         $this->detail_row = 0;
         $this->sorting = false;
+        $this->automatic_aria = false;
         $this->remove_function = 'ttable_remove_row(this)';
         $this->clone_function  = 'ttable_clone_previous_row(this)';
+        $this->summarize = false;
+        $this->total_functions = null;
+        $this->remove_enabled = true;
+    }
+    
+    /**
+     * Get post data as object list 
+     */
+    public function getPostData()
+    {
+        $data = [];
+        
+        foreach($this->fields as $field)
+        {
+            $field_name = $field->getName();
+            $name  = str_replace( ['[', ']'], ['', ''], $field->getName());
+            
+            $data[$name] = $field->getPostData();
+        }
+        
+        $results = [];
+        
+        foreach ($data as $name => $values)
+        {
+            $field_name = $name;
+            
+            if (!empty($this->field_prefix))
+            {
+                $field_name = str_replace($this->field_prefix . '_', '', $field_name);
+            }
+            
+            foreach ($values as $row => $value)
+            {
+                $results[$row] = $results[$row] ?? new stdClass;
+                $results[$row]->$field_name = $value;
+            }
+        }
+        
+        return $results;
+    }
+    
+    /**
+     * Get post row count
+     */
+    public function getRowCount($field_name = null)
+    {
+        if (count($this->fields) > 0)
+        {
+            if (isset($this->fields[$field_name]))
+            {
+                $field = $this->fields[$field_name];
+            }
+            else if (isset($this->fields[$field_name.'[]']))
+            {
+                $field = $this->fields[$field_name.'[]'];
+            }
+            else
+            {
+                $field = array_values($this->fields)[0];
+            }
+            
+            return count(array_filter($field->getPostData(), function($value){
+                return $value !== '';
+            }));
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * Disable remove button
+     */
+    public function disableRemoveButton()
+    {
+        $this->remove_enabled = false;
     }
     
     /**
@@ -57,6 +148,14 @@ class TFieldList extends TTable
     public function enableSorting()
     {
         $this->sorting = true;
+    }
+    
+    /**
+     * Generate automatic aria-labels
+     */
+    public function generateAria()
+    {
+        $this->automatic_aria = true;
     }
     
     /**
@@ -79,9 +178,33 @@ class TFieldList extends TTable
     /**
      * Set the remove javascript action
      */
-    public function setRemoveFunction($action)
+    public function setRemoveFunction($action, $icon = null, $title = null)
     {
         $this->remove_function = $action;
+        $this->remove_icon     = $icon;
+        $this->remove_title    = $title;
+    }
+    
+    /**
+     * Set the remove action
+     */
+    public function setRemoveAction(TAction $action = null, $icon = null, $title = null)
+    {
+        if ($action)
+        {
+            if ($action->isStatic())
+            {
+                $this->remove_action = $action;
+            }
+            else
+            {
+                $string_action = $action->toString();
+                throw new Exception(AdiantiCoreTranslator::translate('Action (^1) must be static to be used in ^2', $string_action, __METHOD__));
+            }
+        }
+        
+        $this->remove_icon  = $icon;
+        $this->remove_title = $title;
     }
     
     /**
@@ -90,6 +213,38 @@ class TFieldList extends TTable
     public function setCloneFunction($action)
     {
         $this->clone_function = $action;
+    }
+    
+    /**
+     * Add function
+     */
+    public function addButtonFunction($function, $icon, $title)
+    {
+        $this->row_functions[] = [$function, $icon, $title];
+    }
+    
+    /**
+     * Add action
+     */
+    public function addButtonAction(TAction $action, $icon, $title)
+    {
+        $this->row_actions[] = [$action, $icon, $title];
+    }
+    
+    /**
+     * Set field prefix
+     */
+    public function setFieldPrefix($prefix)
+    {
+        $this->field_prefix = $prefix;
+    }
+    
+    /**
+     * Get field prefix
+     */
+    public function getFieldPrefix()
+    {
+        return $this->field_prefix;
     }
     
     /**
@@ -103,6 +258,12 @@ class TFieldList extends TTable
         {
             $name = $field->getName();
             
+            if (!empty($this->field_prefix) && strpos($name, $this->field_prefix) === false)
+            {
+                $name = $this->field_prefix . '_' . $name;
+                $field->setName($name);
+            }
+            
             if (isset($this->fields[$name]) AND substr($name,-2) !== '[]')
             {
                 throw new Exception(AdiantiCoreTranslator::translate('You have already added a field called "^1" inside the form', $name));
@@ -112,6 +273,16 @@ class TFieldList extends TTable
             {
                 $this->fields[$name] = $field;
                 $this->fields_properties[$name] = $properties;
+            }
+            
+            if (isset($properties['sum']) && $properties['sum'] == true)
+            {
+                $this->summarize = true;
+            }
+            
+            if (isset($properties['uniqid']) && $properties['uniqid'] == true)
+            {
+                $field->{'uniqid'} = 'true';
             }
             
             if ($label instanceof TLabel)
@@ -126,6 +297,7 @@ class TFieldList extends TTable
             }
             
             $field->setLabel($label_value);
+            $this->labels[$name] = $label_field;
         }
     }
     
@@ -154,7 +326,7 @@ class TFieldList extends TTable
                 }
                 else
                 {
-                    $cell = $row->addCell( new TLabel( $field->getLabel() ) );
+                    $cell = $row->addCell( $this->labels[ $field->getName()] );
                     
                     if (!empty($this->fields_properties[$name]))
                     {
@@ -164,6 +336,24 @@ class TFieldList extends TTable
                         }
                     }
                 }
+            }
+            
+            $all_actions = array_merge( (array) $this->row_functions, (array) $this->row_actions );
+            
+            if ($all_actions)
+            {
+                foreach ($all_actions as $row_action)
+                {
+                    $cell = $row->addCell( '' );
+                    $cell->{'style'} = 'display:none';
+                }
+            }
+            
+            if ($this->remove_enabled)
+            {
+                // aligned with remove button
+                $cell = $row->addCell( '' );
+                $cell->{'style'} = 'display:none';
             }
         }
         
@@ -187,10 +377,11 @@ class TFieldList extends TTable
         if ($this->fields)
         {
             $row = parent::addRow();
+            $row->{'id'} = $uniqid;
             
             if ($this->sorting)
             {
-                $move = new TImage('fa:arrows gray');
+                $move = new TImage('fas:arrows-alt gray');
                 $move->{'class'} .= ' handle';
                 $move->{'style'} .= ';font-size:100%;cursor:move';
                 $row->addCell( $move );
@@ -198,6 +389,9 @@ class TFieldList extends TTable
             
             foreach ($this->fields as $field)
             {
+                $field_name = $field->getName();
+                $name  = str_replace( ['[', ']'], ['', ''], $field->getName());
+                
                 if ($this->detail_row == 0)
                 {
                     $clone = $field;
@@ -207,11 +401,57 @@ class TFieldList extends TTable
                     $clone = clone $field;
                 }
                 
-                $name  = str_replace( ['[', ']'], ['', ''], $field->getName());
+                if (isset($this->fields_properties[$field_name]['sum']) && $this->fields_properties[$field_name]['sum'] == true)
+                {
+                    $field->{'exitaction'} = "tfieldlist_update_sum('{$name}', 'callback')";
+                    $field->{'onBlur'}     = "tfieldlist_update_sum('{$name}', 'callback')";
+                    
+                    $this->total_functions .= $field->{'exitaction'} . ';';
+                    
+                    $value = isset($item->$name) ? $item->$name : 0;
+                    
+                    if (isset($field->{'data-nmask'}))
+                    {
+                        $dec_sep = substr($field->{'data-nmask'},1,1);
+                        $tho_sep = substr($field->{'data-nmask'},2,1);
+                        
+                        if ( (strpos($value, $tho_sep) !== false) && (strpos($value, $dec_sep) !== false) )
+                        {
+                            $value   = str_replace($tho_sep, '', $value);
+                            $value   = str_replace($dec_sep, '.', $value);
+                        }
+                    }
+                    
+                    if (isset($this->totals[$name]))
+                    {
+                        $this->totals[$name] += $value;
+                    }
+                    else
+                    {
+                        $this->totals[$name] = $value;
+                    }
+                }
+                
+                if ($this->automatic_aria)
+                {
+                    $label = $this->labels[ $field->getName() ];
+                    $aria_label = $label->getValue();
+                    $field->{'aria-label'} = $aria_label;
+                }
+                
                 $clone->setId($name.'_'.$uniqid);
                 $clone->{'data-row'} = $this->detail_row;
                 
                 $cell = $row->addCell( $clone );
+                $cell->{'class'} = 'field';
+                
+                if (!empty($this->fields_properties[$field_name]))
+                {
+                    foreach ($this->fields_properties[$field_name] as $property => $value)
+                    {
+                        $cell->setProperty($property, $value);
+                    }
+                }
                 
                 if ($clone instanceof THidden)
                 {
@@ -224,18 +464,63 @@ class TFieldList extends TTable
                 }
                 else
                 {
-                    $clone->setValue( null );
+                    if ($field->{'uniqid'} == true)
+                    {
+                        $clone->setValue( mt_rand(1000000000, 1999999999) );
+                    }
+                    else
+                    {
+                        $clone->setValue( null );
+                    }
                 }
             }
             
-            $del = new TElement('div');
-            $del->{'class'} = 'btn btn-default btn-sm';
-            $del->{'style'} = 'padding:3px 7px';
-            $del->{'onclick'} = $this->remove_function;
-            $del->add('<i class="fa fa-times red"></i>');
+            if ($this->row_actions)
+            {
+                foreach ($this->row_actions as $row_action)
+                {
+                    $string_action = $row_action[0]->serialize(FALSE);
+                    
+                    $btn = new TElement('div');
+                    $btn->{'class'} = 'btn btn-default btn-sm';
+                    $btn->{'onclick'} = "__adianti_ajax_exec('{$string_action}'+'&'+$.param(tfieldlist_get_row_data(this)))";
+                    $btn->{'title'} = $row_action[2];
+                    $btn->add(new TImage($row_action[1]));
+                    $row->addCell( $btn );
+                }
+            }
             
-            $row->addCell( $del );
+            if ($this->row_functions)
+            {
+                foreach ($this->row_functions as $row_function)
+                {
+                    $btn = new TElement('div');
+                    $btn->{'class'} = 'btn btn-default btn-sm';
+                    $btn->{'onclick'} = $row_function[0];
+                    $btn->{'title'} = $row_function[2];
+                    $btn->add(new TImage($row_function[1]));
+                    $row->addCell( $btn );
+                }
+            }
+            
+            if ($this->remove_enabled)
+            {
+                $del = new TElement('div');
+                $del->{'class'} = 'btn btn-default btn-sm';
+                $del->{'onclick'} = $this->total_functions . $this->remove_function;
+                
+                if (isset($this->remove_action))
+                {
+                    $string_action = $this->remove_action->serialize(FALSE);
+                    $del->{'onclick'} .= ";__adianti_ajax_exec('{$string_action}'+'&'+$.param(tfieldlist_get_row_data(this)))";
+                }
+                
+                $del->{'title'} = $this->remove_title ? $this->remove_title : AdiantiCoreTranslator::translate('Delete');
+                $del->add($this->remove_icon ? new TImage($this->remove_icon) : '<i class="fa fa-times red"></i>');
+                $row->addCell( $del );
+            }
         }
+        
         $this->detail_row ++;
         
         return $row;
@@ -244,8 +529,13 @@ class TFieldList extends TTable
     /**
      * Add clone action
      */
-    public function addCloneAction()
+    public function addCloneAction(TAction $clone_action = null, $icon = null, $title = null)
     {
+        if (!$this->body_created)
+        {
+            throw new Exception(AdiantiCoreTranslator::translate('You must call ^1 before ^2', 'addDetail', 'addCloneAction'));
+        }
+        
         parent::addSection('tfoot');
         
         $row = parent::addRow();
@@ -259,19 +549,55 @@ class TFieldList extends TTable
         {
             foreach ($this->fields as $field)
             {
+                $field_name = $field->getName();
+                
                 $cell = $row->addCell('');
                 if ($field instanceof THidden)
                 {
                     $cell->{'style'} = 'display:none';
                 }
+                else if (isset($this->fields_properties[$field_name]['sum']) && $this->fields_properties[$field_name]['sum'] == true)
+                {
+                    $field_name = str_replace('[]', '', $field_name);
+                    $grand_total = clone $field;
+                    $grand_total->setId($field_name.'_'.mt_rand(1000000, 9999999));
+                    $grand_total->setName('grandtotal_'.$field_name);
+                    $grand_total->{'field_name'} = $field_name;
+                    $grand_total->setEditable(FALSE);
+                    $grand_total->{'style'}  .= ';font-weight:bold;border:0 !important;background:none';
+                    
+                    if (!empty($this->totals[$field_name]))
+                    {
+                        $grand_total->setValue($this->totals[$field_name]);
+                    }
+                    
+                    $cell->add($grand_total);
+                }
+            }
+        }
+        
+        $all_actions = array_merge( (array) $this->row_functions, (array) $this->row_actions );
+        
+        if ($all_actions)
+        {
+            foreach ($all_actions as $row_action)
+            {
+                $cell = $row->addCell('');
             }
         }
         
         $add = new TElement('div');
         $add->{'class'} = 'btn btn-default btn-sm';
-        $add->{'style'} = 'padding:3px 7px';
         $add->{'onclick'} = $this->clone_function;
-        $add->add('<i class="fa fa-plus green"></i>');
+        $add->{'title'} = $title ? $title : AdiantiCoreTranslator::translate('Add');
+        
+        if ($clone_action)
+        {
+            $string_action = $clone_action->serialize(FALSE);
+            $add->{'onclick'} = "__adianti_ajax_exec('{$string_action}'+'&'+$.param(tfieldlist_get_last_row_data(this)));".$add->{'onclick'};
+        }
+        
+        $add->add($icon ? new TImage($icon) : '<i class="fa fa-plus green"></i>');
         
         // add buttons in table
         $row->addCell($add);

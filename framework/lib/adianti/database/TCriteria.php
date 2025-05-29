@@ -6,7 +6,7 @@ use Adianti\Database\TExpression;
 /**
  * Provides an interface for filtering criteria definition
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    database
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
@@ -30,6 +30,7 @@ class TCriteria extends TExpression
         $this->properties['order']     = '';
         $this->properties['offset']    = 0;
         $this->properties['direction'] = '';
+        $this->properties['group']     = '';
     }
 
     /**
@@ -94,6 +95,14 @@ class TCriteria extends TExpression
     }
     
     /**
+     * Return if criteria is empty
+     */
+    public function isEmpty()
+    {
+        return count($this->expressions) == 0;
+    }
+    
+    /**
      * Return the prepared vars
      */
     public function getPreparedVars()
@@ -105,7 +114,7 @@ class TCriteria extends TExpression
             {
                 foreach ($this->expressions as $expression)
                 {
-                    $preparedVars = array_merge($preparedVars, $expression->getPreparedVars());
+                    $preparedVars = array_merge($preparedVars, (array) $expression->getPreparedVars());
                 }
                 return $preparedVars;
             }
@@ -134,7 +143,10 @@ class TCriteria extends TExpression
                     $result .=  $operator. $expression->dump( $prepared ) . ' ';
                 }
                 $result = trim($result);
-                return "({$result})";
+                if ($result)
+                {
+                    return "({$result})";
+                }
             }
         }
     }
@@ -167,6 +179,7 @@ class TCriteria extends TExpression
         $this->properties['limit']  = NULL;
         $this->properties['order']  = NULL;
         $this->properties['offset'] = NULL;
+        $this->properties['group']  = NULL;
     }
     
     /**

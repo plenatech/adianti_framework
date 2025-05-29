@@ -13,7 +13,7 @@ use Adianti\Widget\Util\TExceptionView;
 /**
  * Basic structure to run a web application
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    core
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
@@ -22,15 +22,35 @@ use Adianti\Widget\Util\TExceptionView;
 class AdiantiCoreApplication
 {
     private static $router;
+    private static $request_id;
     
+    /**
+     * Execute class/method based on request
+     *
+     * @param $debug Activate Exception debug
+     */
     public static function run($debug = FALSE)
     {
+        self::$request_id = uniqid();
+        
+        $ini = AdiantiApplicationConfig::get();
+        $service = isset($ini['general']['request_log_service']) ? $ini['general']['request_log_service'] : '\SystemRequestLogService';
         $class   = isset($_REQUEST['class'])    ? $_REQUEST['class']   : '';
         $static  = isset($_REQUEST['static'])   ? $_REQUEST['static']  : '';
         $method  = isset($_REQUEST['method'])   ? $_REQUEST['method']  : '';
         
         $content = '';
         set_error_handler(array('AdiantiCoreApplication', 'errorHandler'));
+        
+        if (!empty($ini['general']['request_log']) && $ini['general']['request_log'] == '1')
+        {
+            if (empty($ini['general']['request_log_types']) || strpos($ini['general']['request_log_types'], 'web') !== false)
+            {
+                self::$request_id = $service::register( 'web');
+            }
+        }
+        
+        self::filterInput();
         
         if (in_array(strtolower($class), array_map('strtolower', AdiantiClassMap::getInternalClasses()) ))
         {
@@ -84,7 +104,7 @@ class AdiantiCoreApplication
         {
             call_user_func($method, $_REQUEST);
         }
-        else
+        else if (!empty($class))
         {
             new TMessage('error', AdiantiCoreTranslator::translate('Class ^1 not found', " <b><i><u>{$class}</u></i></b>") . '.<br>' . AdiantiCoreTranslator::translate('Check the class name or the file name').'.');
         }
@@ -96,6 +116,87 @@ class AdiantiCoreApplication
         echo TPage::getLoadedJS();
         
         echo $content;
+    }
+    
+    /**
+     * Execute internal method
+     */
+    public static function execute($class, $method, $request, $endpoint = null)
+    {
+        self::$request_id = uniqid();
+        
+        $ini = AdiantiApplicationConfig::get();
+        $service = isset($ini['general']['request_log_service']) ? $ini['general']['request_log_service'] : '\SystemRequestLogService'; 
+        
+        if (!empty($ini['general']['request_log']) && $ini['general']['request_log'] == '1')
+        {
+            if (empty($endpoint) || empty($ini['general']['request_log_types']) || strpos($ini['general']['request_log_types'], $endpoint) !== false)
+            {
+                self::$request_id = $service::register( $endpoint );
+            }
+        }
+        
+        if (class_exists($class))
+        {
+            if (method_exists($class, $method))
+            {
+                $rf = new ReflectionMethod($class, $method);
+                if ($rf->isStatic())
+                {
+                    $response = call_user_func(array($class, $method), $request);
+                }
+                else
+                {
+                    $response = call_user_func(array(new $class($request), $method), $request);
+                }
+                return $response;
+            }
+            else
+            {
+                throw new Exception(AdiantiCoreTranslator::translate('Method ^1 not found', "$class::$method"));
+            }
+        }
+        else
+        {
+            throw new Exception(AdiantiCoreTranslator::translate('Class ^1 not found', $class));
+        }
+    }
+    
+    /**
+     * Filter specific framework commands
+     */
+    public static function filterInput()
+    {
+        if ($_REQUEST)
+        {
+            foreach ($_REQUEST as $key => $value)
+            {
+                if (is_scalar($value))
+                {
+                    if ( (substr(strtoupper($value),0,7) == '(SELECT') OR (substr(strtoupper($value),0,6) == 'NOESC:'))
+                    {
+                        $_REQUEST[$key] = '';
+                        $_GET[$key]     = '';
+                        $_POST[$key]    = '';
+                    }
+                }
+                else if (is_array($value))
+                {
+                    foreach ($value as $sub_key => $sub_value)
+                    {
+                        if (is_scalar($sub_value))
+                        {
+                            if ( (substr(strtoupper($sub_value),0,7) == '(SELECT') OR (substr(strtoupper($sub_value),0,6) == 'NOESC:'))
+                            {
+                                $_REQUEST[$key][$sub_key] = '';
+                                $_GET[$key][$sub_key]     = '';
+                                $_POST[$key][$sub_key]    = '';
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
     
     /**
@@ -150,9 +251,10 @@ class AdiantiCoreApplication
      */
     public static function gotoPage($class, $method = NULL, $parameters = NULL, $callback = NULL)
     {
+        unset($parameters['static']);
         $query = self::buildHttpQuery($class, $method, $parameters);
         
-        TScript::create("__adianti_goto_page('{$query}');");
+        TScript::create("__adianti_goto_page('{$query}');", true, 1);
     }
     
     /**
@@ -166,7 +268,19 @@ class AdiantiCoreApplication
     {
         $query = self::buildHttpQuery($class, $method, $parameters);
         
-        TScript::create("__adianti_load_page('{$query}');");
+        TScript::create("__adianti_load_page('{$query}');", true, 1);
+    }
+    
+    /**
+     * Load a page url
+     *
+     * @param $class class name
+     * @param $method method name
+     * @param $parameters array of parameters
+     */
+    public static function loadPageURL($query)
+    {
+        TScript::create("__adianti_load_page('{$query}');", true, 1);
     }
     
     /**
@@ -254,8 +368,45 @@ class AdiantiCoreApplication
         if ( $errno === E_RECOVERABLE_ERROR )
         {
             throw new ErrorException($errstr, $errno, 0, $errfile, $errline);
-        	}
-        	
-        	return false;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Get request headers
+     */
+    public static function getHeaders()
+    {
+        $headers = array();
+        foreach ($_SERVER as $key => $value)
+        {
+            if (substr($key, 0, 5) == 'HTTP_')
+            {
+                $header = str_replace(' ', '-', ucwords(str_replace('_', ' ', strtolower(substr($key, 5)))));
+                $headers[$header] = $value;
+            }
+        }
+        
+        if (function_exists('getallheaders'))
+        {
+            $allheaders = getallheaders();
+            
+            if ($allheaders)
+            {
+                return $allheaders;
+            }
+            
+            return $headers;
+        }
+        return $headers;
+    }
+    
+    /**
+     * Returns the execution id
+     */
+    public static function getRequestId()
+    {
+        return self::$request_id;
     }
 }

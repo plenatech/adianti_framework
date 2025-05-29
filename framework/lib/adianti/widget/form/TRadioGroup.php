@@ -16,7 +16,7 @@ use Exception;
 /**
  * A group of RadioButton's
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -85,6 +85,16 @@ class TRadioGroup extends TField implements AdiantiWidgetInterface
                            '2' => AdiantiCoreTranslator::translate('No') ] );
         $this->setLayout('horizontal');
         $this->setUseButton();
+        
+        // if setValue() was called previously
+        if ($this->value === true)
+        {
+            $this->value = '1';
+        }
+        else if ($this->value === false)
+        {
+            $this->value = '2';
+        }
     }
     
     /**
@@ -278,15 +288,20 @@ class TRadioGroup extends TField implements AdiantiWidgetInterface
     {
         if ($this->useButton)
         {
-            echo '<div data-toggle="buttons">';
+            echo '<div '.$this->getPropertiesAsString('aria').' data-toggle="buttons">';
+            
             if (strpos($this->getSize(), '%') !== FALSE)
             {
-                echo '<div class="btn-group" style="clear:both;float:left;width:100%">';
+                echo '<div class="btn-group" style="clear:both;float:left;width:100%;display:table" role="group">';
             }
             else
             {
-                echo '<div class="btn-group" style="clear:both;float:left">';
+                echo '<div class="btn-group" style="clear:both;float:left;display:table" role="group">';
             }
+        }
+        else
+        {
+            echo '<div '.$this->getPropertiesAsString('aria').' role="group">';
         }
         
         if ($this->items)
@@ -298,6 +313,7 @@ class TRadioGroup extends TField implements AdiantiWidgetInterface
                 $button = $this->buttons[$index];
                 $button->setName($this->name);
                 $active = FALSE;
+                $id = $button->getId();
                 
                 // check if contains any value
                 if ( $this->value == $index AND !(is_null($this->value)) AND strlen((string) $this->value) > 0)
@@ -340,7 +356,7 @@ class TRadioGroup extends TField implements AdiantiWidgetInterface
                         }
                         $string_action = $this->changeAction->serialize(FALSE);
                         
-                        $button->setProperty('changeaction', "__adianti_post_lookup('{$this->formName}', '{$string_action}', this, 'callback')");
+                        $button->setProperty('changeaction', "__adianti_post_lookup('{$this->formName}', '{$string_action}', '{$id}', 'callback')");
                         $button->setProperty('onChange', $button->getProperty('changeaction'), FALSE);
                     }
                     
@@ -356,8 +372,23 @@ class TRadioGroup extends TField implements AdiantiWidgetInterface
                     $obj->setFontColor('gray');
                 }
                 
-                $obj->add($button);
-                $obj->show();
+                if ($this->useButton)
+                {
+                    $obj->add($button);
+                    $obj->show();
+                }
+                else
+                {
+                    $button->setProperty('class', 'filled-in');
+                    $obj->{'for'} = $button->getId();
+                    
+                    $wrapper = new TElement('div');
+                    $wrapper->{'style'} = 'display:inline-flex;align-items:center;';
+                    $wrapper->add($button);
+                    $wrapper->add($obj);
+                    $wrapper->show();
+                }
+                
                 $i ++;
                 
                 if ($this->layout == 'vertical' OR ($this->breakItems == $i))
@@ -366,7 +397,7 @@ class TRadioGroup extends TField implements AdiantiWidgetInterface
                     if ($this->useButton)
                     {
                        echo '</div>';
-                       echo '<div class="btn-group" style="clear:both;float:left">';
+                       echo '<div class="btn-group" style="clear:both;float:left;display:table">';
                     }
                     else
                     {
@@ -383,6 +414,15 @@ class TRadioGroup extends TField implements AdiantiWidgetInterface
         {
             echo '</div>';
             echo '</div>';
+        }
+        else
+        {
+            echo '</div>';
+        }
+        
+        if (!empty($this->getAfterElement()))
+        {
+            $this->getAfterElement()->show();
         }
     }
 }

@@ -13,7 +13,7 @@ use Exception;
 /**
  * Text Widget (also known as Memo)
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -70,6 +70,18 @@ class TText extends TField implements AdiantiWidgetInterface
     }
     
     /**
+     * Define max length
+     * @param  $length Max length
+     */
+    public function setMaxLength($length)
+    {
+        if ($length > 0)
+        {
+            $this->tag->{'maxlength'} = $length;
+        }
+    }
+    
+    /**
      * Define the action to be executed when the user leaves the form field
      * @param $action TAction object
      */
@@ -92,6 +104,46 @@ class TText extends TField implements AdiantiWidgetInterface
     public function setExitFunction($function)
     {
         $this->exitFunction = $function;
+    }
+    
+    /**
+     * Force lower case
+     */
+    public function forceLowerCase()
+    {
+        $this->tag->{'onKeyPress'} = "return tentry_lower(this)";
+        $this->tag->{'onBlur'} = "return tentry_lower(this)";
+        $this->tag->{'forcelower'} = "1";
+        $this->setProperty('style', 'text-transform: lowercase');
+        
+    }
+    
+    /**
+     * Force upper case
+     */
+    public function forceUpperCase()
+    {
+        $this->tag->{'onKeyPress'} = "return tentry_upper(this)";
+        $this->tag->{'onBlur'} = "return tentry_upper(this)";
+        $this->tag->{'forceupper'} = "1";
+        $this->setProperty('style', 'text-transform: uppercase');
+    }
+    
+    /**
+     * Return the post data
+     */
+    public function getPostData()
+    {
+        $name = str_replace(['[',']'], ['',''], $this->name);
+        
+        if (isset($_POST[$name]))
+        {
+            return $_POST[$name];
+        }
+        else
+        {
+            return '';
+        }
     }
     
     /**
@@ -124,6 +176,7 @@ class TText extends TField implements AdiantiWidgetInterface
             // make the widget read-only
             $this->tag->{'readonly'} = "1";
             $this->tag->{'class'} = $this->tag->{'class'} == 'tfield' ? 'tfield_disabled' : $this->tag->{'class'} . ' tfield_disabled'; // CSS
+            $this->tag->{'tabindex'} = '-1';
         }
         
         if (isset($this->exitAction))
@@ -133,7 +186,7 @@ class TText extends TField implements AdiantiWidgetInterface
                 throw new Exception(AdiantiCoreTranslator::translate('You must pass the ^1 (^2) as a parameter to ^3', __CLASS__, $this->name, 'TForm::setFields()') );
             }
             $string_action = $this->exitAction->serialize(FALSE);
-            $this->setProperty('exitaction', "__adianti_post_lookup('{$this->formName}', '{$string_action}', this, 'callback')");
+            $this->setProperty('exitaction', "__adianti_post_lookup('{$this->formName}', '{$string_action}', '{$this->id}', 'callback')");
             $this->setProperty('onBlur', $this->getProperty('exitaction'), FALSE);
         }
         

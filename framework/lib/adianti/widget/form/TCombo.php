@@ -12,7 +12,7 @@ use Exception;
 /**
  * ComboBox Widget
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -57,6 +57,16 @@ class TCombo extends TField implements AdiantiWidgetInterface
         $this->is_boolean = true;
         $this->addItems( [ '1' => AdiantiCoreTranslator::translate('Yes'),
                            '2' => AdiantiCoreTranslator::translate('No') ] );
+                           
+        // if setValue() was called previously
+        if ($this->value === true)
+        {
+            $this->value = '1';
+        }
+        else if ($this->value === false)
+        {
+            $this->value = '2';
+        }
     }
     
     /**
@@ -383,7 +393,7 @@ class TCombo extends TField implements AdiantiWidgetInterface
             $this->tag->{'onclick'}  = "return false;";
             $this->tag->{'style'}   .= ';pointer-events:none';
             $this->tag->{'tabindex'} = '-1';
-            $this->tag->{'class'}    = 'tcombo_disabled'; // CSS
+            $this->tag->{'class'}    = 'tcombo tcombo_disabled'; // CSS
         }
         
         if ($this->searchable)

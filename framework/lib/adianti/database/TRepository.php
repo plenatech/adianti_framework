@@ -15,7 +15,7 @@ use ReflectionClass;
 /**
  * Implements the Repository Pattern to deal with collections of Active Records
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    database
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
@@ -53,6 +53,14 @@ class TRepository
     }
     
     /**
+     * Set criteria
+     */
+    public function setCriteria(TCriteria $criteria)
+    {
+        $this->criteria = $criteria;
+    }
+    
+    /**
      * Returns the name of database entity
      * @return A String containing the name of the entity
      */
@@ -68,7 +76,7 @@ class TRepository
     {
         if (!empty($this->columns))
         {
-            return implode(',', $this->columns);
+            return implode(', ', $this->columns);
         }
         else
         {
@@ -145,6 +153,19 @@ class TRepository
     {
         $this->criteria->setProperty('order', $order);
         $this->criteria->setProperty('direction', $direction);
+        
+        return $this;
+    }
+    
+    /**
+     * Define the group for criteria using fluent interfaces
+     * 
+     * @param  $group Group column
+     * @return A TRepository object
+     */
+    public function groupBy($group)
+    {
+        $this->criteria->setProperty('group', $group);
         
         return $this;
     }
@@ -240,7 +261,7 @@ class TRepository
                         }
                     }
                     
-                    if ( $cache = $object->getCacheControl() )
+                    if ( ($cache = $object->getCacheControl()) && empty($this->columns))
                     {
                         $pk = $object->getPrimaryKey();
                         $record_key = $class . '['. $object->$pk . ']';
@@ -273,8 +294,13 @@ class TRepository
     /**
      * Return a indexed array
      */
-    public function getIndexedArray($indexColumn, $valueColumn, $criteria = NULL)
+    public function getIndexedArray($indexColumn, $valueColumn = NULL, $criteria = NULL)
     {
+        if (is_null($valueColumn))
+        {
+            $valueColumn = $indexColumn;
+        }
+        
         $criteria = (empty($criteria)) ? $this->criteria : $criteria;
         $objects = $this->load($criteria, FALSE);
         
@@ -526,6 +552,139 @@ class TRepository
                 $row = $result->fetch();
                 return $row[0];
             }
+        }
+        else
+        {
+            // if there's no active transaction opened
+            throw new Exception(AdiantiCoreTranslator::translate('No active transactions') . ': ' . __METHOD__ .' '. $this->getEntity());
+        }
+    }
+    
+    /**
+     * Count distinct aggregate
+     * @param $column  Column to be aggregated
+     * @return         An array of objects or the total value (if does not have group by)
+     */
+    public function countDistinctBy($column, $alias = null)
+    {
+        $alias = is_null($alias) ? $column : $alias;
+        return $this->aggregate('count', 'distinct ' . $column, $alias);
+    }
+    
+    /**
+     * Count aggregate
+     * @param $column  Column to be aggregated
+     * @return         An array of objects or the total value (if does not have group by)
+     */
+    public function countBy($column, $alias = null)
+    {
+        return $this->aggregate('count', $column, $alias);
+    }
+    
+    /**
+     * Sum aggregate
+     * @param $column  Column to be aggregated
+     * @return         An array of objects or the total value (if does not have group by)
+     */
+    public function sumBy($column, $alias = null)
+    {
+        return $this->aggregate('sum', $column, $alias);
+    }
+    
+    /**
+     * Average aggregate
+     * @param $column  Column to be aggregated
+     * @return         An array of objects or the total value (if does not have group by)
+     */
+    public function avgBy($column, $alias = null)
+    {
+        return $this->aggregate('avg', $column, $alias);
+    }
+    
+    /**
+     * Min aggregate
+     * @param $column  Column to be aggregated
+     * @return         An array of objects or the total value (if does not have group by)
+     */
+    public function minBy($column, $alias = null)
+    {
+        return $this->aggregate('min', $column, $alias);
+    }
+    
+    /**
+     * Max aggregate
+     * @param $column  Column to be aggregated
+     * @return         An array of objects or the total value (if does not have group by)
+     */
+    public function maxBy($column, $alias = null)
+    {
+        return $this->aggregate('max', $column, $alias);
+    }
+    
+    /**
+     * Aggregate column
+     * @param $function Aggregate function (count, sum, min, max, avg)
+     * @return          An array of objects or the total value (if does not have group by)
+     */
+    protected function aggregate($function, $column, $alias = null)
+    {
+        $criteria = isset($this->criteria) ? $this->criteria : new TCriteria;
+        $alias = $alias ? $alias : $column;
+        // creates a SELECT statement
+        $sql = new TSqlSelect;
+        if (!empty( $this->criteria->getProperty('group') ))
+        {
+            $sql->addColumn( $this->criteria->getProperty('group') );
+        }
+        $sql->addColumn("$function({$column}) as \"{$alias}\"");
+        
+        $sql->setEntity($this->getEntity());
+        
+        // assign the criteria to the SELECT statement
+        $sql->setCriteria($criteria);
+        
+        // get the connection of the active transaction
+        if ($conn = TTransaction::get())
+        {
+            // register the operation in the LOG file
+            TTransaction::log($sql->getInstruction());
+            
+            $dbinfo = TTransaction::getDatabaseInfo(); // get dbinfo
+            if (isset($dbinfo['prep']) AND $dbinfo['prep'] == '1') // prepared ON
+            {
+                $result = $conn-> prepare ( $sql->getInstruction( TRUE ) , array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
+                $result-> execute ( $criteria->getPreparedVars() );
+            }
+            else
+            {
+                // executes the SELECT statement
+                $result= $conn-> query($sql->getInstruction());
+            }
+            
+            $results = [];
+            
+            if ($result)
+            {
+                // iterate the results as objects
+                while ($raw = $result-> fetchObject())
+                {
+                    $results[] = $raw;
+                }
+            }
+            
+            if ($results)
+            {
+                if ( (count($results) > 1) || !empty($this->criteria->getProperty('group')))
+                {
+                    return $results;
+                }
+                else
+                {
+                    return $results[0]->$alias;
+                }
+            }
+            
+            return 0;
         }
         else
         {

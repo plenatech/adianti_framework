@@ -7,7 +7,7 @@ use Adianti\Widget\Form\TField;
 /**
  * CheckButton widget
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -17,6 +17,17 @@ use Adianti\Widget\Form\TField;
 class TCheckButton extends TField implements AdiantiWidgetInterface
 {
     private $indexValue;
+    
+    /**
+     * Class Constructor
+     * @param $name Name of the widget
+     */
+    public function __construct($name)
+    {
+        parent::__construct($name);
+        $this->id = 'tcheckbutton_' . mt_rand(1000000000, 1999999999);
+        $this->tag->{'class'} = '';
+    }
     
     /**
      * Define the index value for check button
@@ -36,7 +47,11 @@ class TCheckButton extends TField implements AdiantiWidgetInterface
         $this->tag->{'name'}  = $this->name;    // tag name
         $this->tag->{'type'}  = 'checkbox';     // input type
         $this->tag->{'value'} = $this->indexValue;   // value
-        $this->tag->{'class'} = '';
+        
+        if ($this->id and empty($this->tag->{'id'}))
+        {
+            $this->tag->{'id'} = $this->id;
+        }
         
         // compare current value with indexValue
         if ($this->indexValue == $this->value AND !(is_null($this->value)) AND strlen((string) $this->value) > 0)
@@ -51,6 +66,7 @@ class TCheckButton extends TField implements AdiantiWidgetInterface
             //$this->tag-> disabled   = "1"; // the value don't post
             $this->tag->{'onclick'} = "return false;";
             $this->tag->{'style'}   = 'pointer-events:none';
+            $this->tag->{'tabindex'} = '-1';
         }
         
         // shows the tag

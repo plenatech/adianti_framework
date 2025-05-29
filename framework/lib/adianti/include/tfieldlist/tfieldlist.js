@@ -1,7 +1,8 @@
 function tfieldlist_reset_fields(row, clear_fields)
 {
-    var fields = $(row).find('input,select');
     var uniqid = parseInt(Math.random() * 100000000);
+    $(row).attr('id', uniqid);
+    var fields = $(row).find('input,select');
     var newids = [];
     
     $.each(fields, function(index, field)
@@ -126,7 +127,10 @@ function tfieldlist_reset_fields(row, clear_fields)
             else if (field_component =='thidden')
             {
                 $(field).attr('id', new_id);
-                if (clear_fields) {
+                if ($(field).attr('uniqid') == 'true') {
+                    $(field).val(parseInt(Math.random() * 10000000000));
+                }
+                else if (clear_fields) {
                     $(field).val('');
                 }
                 
@@ -139,6 +143,8 @@ function tfieldlist_reset_fields(row, clear_fields)
             else if (field_component =='tdbmultisearch' || field_component =='tdbuniquesearch')
             {
                 $(field).attr('id', new_id);
+                $(field).removeData('select2-id').removeAttr('data-select2-id').find('option').removeAttr('data-select2-id');
+                $(row).removeData('select2-id').removeAttr('data-select2-id');
                 
                 // remove select2 container previously processed
                 $(parent).find('.select2-container').remove();
@@ -156,6 +162,9 @@ function tfieldlist_reset_fields(row, clear_fields)
             else if (field_component =='tmultisearch' || field_component =='tuniquesearch')
             {
                 $(field).attr('id', new_id);
+                $(field).removeData('select2-id').removeAttr('data-select2-id').find('option').removeAttr('data-select2-id');
+                $(row).removeData('select2-id').removeAttr('data-select2-id');
+                
                 $(parent).find('.select2-container').remove();
                 
                 var re = new RegExp(field_id, 'g');
@@ -175,8 +184,10 @@ function tfieldlist_reset_fields(row, clear_fields)
                 if (clear_fields) {
                     $(field).val('');
                 }
-                
                 if (field_role == 'tcombosearch') {
+                    // clear data attributes
+                    $(field).removeData('select2-id').removeAttr('data-select2-id').find('option').removeAttr('data-select2-id');
+                    $(row).removeData('select2-id').removeAttr('data-select2-id');
                     $(parent).find('.select2-container').remove();
                 }
                 
@@ -190,6 +201,38 @@ function tfieldlist_reset_fields(row, clear_fields)
                 var re = new RegExp(field_id, 'g');
                 tfieldlist_execute_scripts(parent, 'tcombo', function(script_content) {
                     script_content = script_content.replace(re, new_id);
+                    return script_content;
+                });
+            }
+            else if (field_component =='tfile')
+            {
+                $(field).attr('id', new_id);
+                
+                if (clear_fields) {
+                    $(field).val('');
+                }
+                
+                var parent = $(field).closest('td');
+                var file_wrapper_id = parent.find('.div_file').attr('id');
+                var new_file_wrapper_id = 'div_file_' + uniqid;
+                
+                parent.find('.tfile_row_wrapper').remove();
+                parent.find('.file-response-icon').remove();
+                parent.find('.div_file').attr('id', new_file_wrapper_id);
+                $(field).css('padding-left', '5px');
+                
+                if (typeof $(field).attr('changeaction') !== 'undefined') {
+                    $(field).attr('changeaction', $(field).attr('changeaction').replace(field_id, new_id));
+                }
+                if (typeof $(field).attr('onchange') !== 'undefined') {
+                    $(field).attr('onchange', $(field).attr('onchange').replace(field_id, new_id));
+                }
+                
+                var re  = new RegExp(field_id, 'g');
+                var re2 = new RegExp(file_wrapper_id, 'g');
+                tfieldlist_execute_scripts(parent, 'tfile', function(script_content) {
+                    script_content = script_content.replace(re,  new_id);
+                    script_content = script_content.replace(re2, new_file_wrapper_id);
                     return script_content;
                 });
             }
@@ -229,7 +272,9 @@ function tfieldlist_clear(name)
         if(i<rows) {
             ttable_remove_row(e);
         }
-        
+    });
+    $('[name='+name+'] tfoot').find('input[type="text"]').each(function(i,e){
+        tfieldlist_update_sum($(e).attr('field_name'));
     });
 }
 
@@ -258,4 +303,59 @@ function tfieldlist_clear_rows(name, start, length)
             $(e).remove();
         }
     });
+}
+
+function tfieldlist_get_last_row_data(generator)
+{
+    var values = {};
+    values.index = $(generator).closest('table').find('tbody tr:last').index();
+    
+    $(generator).closest('table').find('tbody tr:last').find('[name]').each(function(k,v) {
+        var attribute_name  = $(v).attr('name');
+        attribute_name = attribute_name.replace('[]', '');
+        values[ attribute_name ] = $(v).val();
+    });
+    
+    return values;
+}
+
+function tfieldlist_get_row_data(generator)
+{
+    var values = {};
+    values.index = $(generator).closest('tr').index();
+    
+    values[ '_row_id' ] = $(generator).closest('tr').attr('id');
+    
+    $(generator).closest('tr').find('[name]').each(function(k,v) {
+        var attribute_name  = $(v).attr('name');
+        attribute_name = attribute_name.replace('[]', '');
+        values[ attribute_name ] = $(v).val();
+    });
+    
+    return values;
+}
+
+function tfieldlist_column_sum(field_name)
+{
+    var total = 0;
+    $('[name="'+field_name+'[]"]').each(function (k,v) {
+        var total_raw = tentry_get_data_by_id( $(v).attr('id') );
+        if (!isNaN(parseFloat(total_raw))) {
+            total += parseFloat(total_raw);
+        }
+    });
+    return total;
+}
+
+function tfieldlist_update_sum(field_name, callback)
+{
+    setTimeout( function() {
+        var total = tfieldlist_column_sum(field_name);
+        $('[name=grandtotal_'+field_name+']').val( number_format( total, 2, ',', '.') );
+        
+        if (callback && typeof(callback) === "function")
+        {
+            callback();
+        }
+    }, 50);
 }

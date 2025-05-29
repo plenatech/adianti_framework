@@ -15,7 +15,7 @@ use Exception;
 /**
  * Database Multisearch Widget
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage wrapper
  * @author     Pablo Dall'Oglio
@@ -45,6 +45,7 @@ class TDBMultiSearch extends TMultiSearch
     protected $editable;
     protected $changeFunction;
     protected $idSearch;
+    protected $idTextSearch;
     
     /**
      * Class Constructor
@@ -94,11 +95,22 @@ class TDBMultiSearch extends TMultiSearch
         $this->operator = null;
         $this->orderColumn = isset($orderColumn) ? $orderColumn : NULL;
         $this->criteria = $criteria;
-        $this->mask = '{'.$value.'}';
+        
+        if (strpos($value,',') !== false)
+        {
+            $columns = explode(',', $value);
+            $this->mask = '{'.$columns[0].'}';
+        }
+        else
+        {
+            $this->mask = '{'.$value.'}';
+        }
+        
         $this->service = 'AdiantiMultiSearchService';
         $this->seed = APPLICATION_NAME . ( !empty($ini['general']['seed']) ? $ini['general']['seed'] : 's8dkld83kf73kf094' );
         $this->tag->{'widget'} = 'tdbmultisearch';
         $this->idSearch = true;
+        $this->idTextSearch = false;
     }
     
     /**
@@ -116,6 +128,14 @@ class TDBMultiSearch extends TMultiSearch
     public function disableIdSearch()
     {
         $this->idSearch = false;
+    }
+    
+    /**
+     * Enable Id textual search
+     */
+    public function enableIdTextualSearch()
+    {
+        $this->idTextSearch = true;
     }
     
     /**
@@ -142,6 +162,7 @@ class TDBMultiSearch extends TMultiSearch
      */
     public function setValue($values)
     {
+        $original_values = $values;
         $ini = AdiantiApplicationConfig::get();
         
         if (isset($ini['general']['compat']) AND $ini['general']['compat'] ==  '4')
@@ -157,6 +178,11 @@ class TDBMultiSearch extends TMultiSearch
             $items = [];
             if ($values)
             {
+                if (!empty($this->separator))
+                {
+                    $values = explode($this->separator, $values);
+                }
+                
                 TTransaction::open($this->database);
                 foreach ($values as $value)
                 {
@@ -186,8 +212,8 @@ class TDBMultiSearch extends TMultiSearch
                 TTransaction::close();
                 
                 parent::addItems( $items );
-                parent::setValue( $values );
             }
+            parent::setValue( $original_values );
         }
     }
     
@@ -237,7 +263,14 @@ class TDBMultiSearch extends TMultiSearch
             }
             else
             {
-                return $values;
+                if (empty($this->separator))
+                {
+                    return $values;
+                }
+                else
+                {
+                    return implode($this->separator, $values);
+                }
             }
         }
         else
@@ -285,8 +318,9 @@ class TDBMultiSearch extends TMultiSearch
         $callback = array($class, 'onSearch');
         $method = $callback[1];
         $id_search_string = $this->idSearch ? '1' : '0';
-        $search_word = AdiantiCoreTranslator::translate('Search');
-        $url = "engine.php?class={$class}&method={$method}&static=1&database={$this->database}&key={$this->key}&column={$this->column}&model={$this->model}&orderColumn={$orderColumn}&criteria={$criteria}&operator={$this->operator}&mask={$this->mask}&idsearch={$id_search_string}";
+        $id_text_search = $this->idTextSearch ? '1' : '0';
+        $search_word = !empty($this->getProperty('placeholder'))? $this->getProperty('placeholder') : AdiantiCoreTranslator::translate('Search');
+        $url = "engine.php?class={$class}&method={$method}&static=1&database={$this->database}&key={$this->key}&column={$this->column}&model={$this->model}&orderColumn={$orderColumn}&criteria={$criteria}&operator={$this->operator}&mask={$this->mask}&idsearch={$id_search_string}&idtextsearch={$id_text_search}&minlength={$length}";
         $change_action = 'function() {}';
         
         if (isset($this->changeAction))

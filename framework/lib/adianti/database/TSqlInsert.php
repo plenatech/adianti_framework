@@ -9,13 +9,13 @@ use Exception;
 /**
  * Provides an Interface to create an INSERT statement
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    database
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
-final class TSqlInsert extends TSqlStatement
+class TSqlInsert extends TSqlStatement
 {
     protected $sql;
     private $columnValues;
@@ -40,6 +40,18 @@ final class TSqlInsert extends TSqlStatement
         if (is_scalar($value) OR is_null($value))
         {
             $this->columnValues[$column] = $value;
+        }
+    }
+    
+    /**
+     * Unset row data
+     * @param $column   Name of the database column
+     */
+    public function unsetRowData($column)
+    {
+        if (isset($this->columnValues[$column]))
+        {
+            unset($this->columnValues[$column]);
         }
     }
     
@@ -138,7 +150,7 @@ final class TSqlInsert extends TSqlStatement
         $columns = implode(', ', array_keys($columnValues));   // concatenates the column names
         $values  = implode(', ', array_values($columnValues)); // concatenates the column values
         $this->sql .= $columns . ')';
-        $this->sql .= " values ({$values})";
+        $this->sql .= " VALUES ({$values})";
         // returns the string
         return $this->sql;
     }

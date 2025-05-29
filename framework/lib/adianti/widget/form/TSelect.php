@@ -14,7 +14,7 @@ use Exception;
 /**
  * Select Widget
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -32,6 +32,7 @@ class TSelect extends TField implements AdiantiWidgetInterface
     protected $defaultOption;
     protected $separator;
     protected $value;
+    protected $withTitles;
     
     /**
      * Class Constructor
@@ -43,10 +44,11 @@ class TSelect extends TField implements AdiantiWidgetInterface
         parent::__construct($name);
         $this->id   = 'tselect_' . mt_rand(1000000000, 1999999999);
         $this->defaultOption = '';
-
+        $this->withTitles = true;
+        
         // creates a <select> tag
         $this->tag = new TElement('select');
-        $this->tag->{'class'} = 'tcombo'; // CSS
+        $this->tag->{'class'} = 'tselect'; // CSS
         $this->tag->{'multiple'} = '1';
         $this->tag->{'widget'} = 'tselect';
     }
@@ -61,6 +63,14 @@ class TSelect extends TField implements AdiantiWidgetInterface
         $this->tag->{'size'} = 3;
     }
 
+    /**
+     * Disable option titles
+     */
+    public function disableTitles()
+    {
+        $this->withTitles = false;
+    }
+    
     public function setDefaultOption($option)
     {
         $this->defaultOption = $option;
@@ -281,7 +291,7 @@ class TSelect extends TField implements AdiantiWidgetInterface
                     {
                         $option->{'title'} = $item;  // define the title
                     }
-                    $option->{'titside'} = 'right';  // define the title side
+                    $option->{'titside'} = 'left';  // define the title side
                     $option->add(htmlspecialchars($item));      // add the item label
                     
                     // verify if this option is selected
@@ -328,7 +338,7 @@ class TSelect extends TField implements AdiantiWidgetInterface
                 }
                 
                 $string_action = $this->changeAction->serialize(FALSE);
-                $this->setProperty('changeaction', "__adianti_post_lookup('{$this->formName}', '{$string_action}', this, 'callback')");
+                $this->setProperty('changeaction', "__adianti_post_lookup('{$this->formName}', '{$string_action}', '{$this->id}', 'callback')");
                 $this->setProperty('onChange', $this->getProperty('changeaction'));
             }
             
@@ -343,11 +353,11 @@ class TSelect extends TField implements AdiantiWidgetInterface
             // make the widget read-only
             $this->tag->{'onclick'} = "return false;";
             $this->tag->{'style'}  .= ';pointer-events:none';
-            $this->tag->{'class'}   = 'tfield_disabled'; // CSS
+            $this->tag->{'class'}   = 'tselect_disabled'; // CSS
         }
         
         // shows the widget
-        $this->renderItems();
+        $this->renderItems( $this->withTitles );
         $this->tag->show();
     }
 }

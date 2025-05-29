@@ -8,7 +8,7 @@ use Adianti\Widget\Base\TElement;
 /**
  * Calendar Widget
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage util
  * @author     Pablo Dall'Oglio
@@ -24,6 +24,7 @@ class TCalendar extends TElement
     private $height;
     private $action;
     private $selectedDays;
+    private $weekendHighlight;
     
     /**
      * Class Constructor
@@ -35,8 +36,17 @@ class TCalendar extends TElement
         $this->width = 400;
         $this->height = 300;
         $this->selectedDays = array();
-        $this->months = array(_t('January'), _t('February'), _t('March'), _t('April'), _t('May'), _t('June'),
-                              _t('July'), _t('August'), _t('September'), _t('October'), _t('November'), _t('December'));
+        $this->weekendHighlight = false;
+        $this->months = [_t('January'), _t('February'), _t('March'), _t('April'), _t('May'), _t('June'),
+                         _t('July'), _t('August'), _t('September'), _t('October'), _t('November'), _t('December')];
+    }
+    
+    /**
+     * highglight weekend
+     */
+    public function highlightWeekend()
+    {
+        $this->weekendHighlight = true;
     }
     
     /**
@@ -107,7 +117,7 @@ class TCalendar extends TElement
      */
     public function show()
     {
-        $this-> style = "width: {$this->width}px; height: {$this->height}px";
+        $this->{'style'} = "width: {$this->width}px; height: {$this->height}px";
         
         $this->month = $this->month ? $this->month : date('m');
         $this->year = $this->year ? $this->year : date('Y');
@@ -118,21 +128,21 @@ class TCalendar extends TElement
         
         $row = $table->addRow();
         $cell = $row->addCell($this->months[$this->month -1] . ' ' . $this->year);
-        $cell-> colspan = 7;
-        $cell-> class = 'calendar-header';
+        $cell->{'colspan'} = 7;
+        $cell->{'class'} = 'calendar-header';
         
         $row = $table->addRow();
-        $row->addCell('S')->class='calendar-header';
-        $row->addCell('M')->class='calendar-header';
-        $row->addCell('T')->class='calendar-header';
-        $row->addCell('W')->class='calendar-header';
-        $row->addCell('T')->class='calendar-header';
-        $row->addCell('F')->class='calendar-header';
-        $row->addCell('S')->class='calendar-header';
+        $row->addCell(substr(_t('Sunday'),0,1))->{'class'} = 'calendar-header-day';
+        $row->addCell(substr(_t('Monday'),0,1))->{'class'} = 'calendar-header-day';
+        $row->addCell(substr(_t('Tuesday'),0,1))->{'class'} = 'calendar-header-day';
+        $row->addCell(substr(_t('Wednesday'),0,1))->{'class'} = 'calendar-header-day';
+        $row->addCell(substr(_t('Thursday'),0,1))->{'class'} = 'calendar-header-day';
+        $row->addCell(substr(_t('Friday'),0,1))->{'class'} = 'calendar-header-day';
+        $row->addCell(substr(_t('Saturday'),0,1))->{'class'} = 'calendar-header-day';
         
         
-        $prev_year = $this->year;
-        $next_year = $this->year;
+        $prev_year  = $this->year;
+        $next_year  = $this->year;
         $prev_month = $this->month - 1;
         $next_month = $this->month + 1;
          
@@ -152,31 +162,46 @@ class TCalendar extends TElement
         $maxday = date("t", $timestamp);
         $thismonth = getdate ($timestamp);
         $startday = $thismonth['wday'];
+        $dayofweek = 0;
+        
         for ($i=0; $i<($maxday + $startday); $i++)
         {
             if (($i % 7) == 0 )
             {
                 $row = $table->addRow();
-                $row-> class = 'calendar-rowdata';
+                $row->{'class'} = 'calendar-rowdata';
+                $dayofweek = 0;
             }
             
             if ($i < $startday)
             {
                 $row->addCell('');
+                $dayofweek ++;
             }
             else
             {
                 $current_day = ($i - $startday + 1);
                 $cell = $row->addCell( $current_day );
+                $dayofweek ++;
+                
                 if (in_array($current_day, $this->selectedDays))
                 {
-                    $cell-> class = 'calendar-data calendar-selected';
+                    $cell->{'class'} = 'calendar-data calendar-selected';
                 }
                 else
                 {
-                    $cell-> class = 'calendar-data';
+                    $cell->{'class'} = 'calendar-data';
                 }
-                $cell-> valign = 'middle';
+                
+                if ($this->weekendHighlight)
+                {
+                    if ($dayofweek == 1 || $dayofweek == 7)
+                    {
+                        $cell->{'class'} .= ' weekend';
+                    }
+                }
+                
+                $cell->{'valign'} = 'middle';
                 
                 if ($this->action instanceof TAction)
                 {
@@ -184,7 +209,7 @@ class TCalendar extends TElement
                     $this->action->setParameter('month', $this->month);
                     $this->action->setParameter('day', $current_day);
                     $string_action = $this->action->serialize(FALSE);
-                    $cell-> onclick = "__adianti_ajax_exec('{$string_action}')";
+                    $cell->{'onclick'} = "__adianti_ajax_exec('{$string_action}')";
                 }
             }
         }

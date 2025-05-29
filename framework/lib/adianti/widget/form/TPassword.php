@@ -12,7 +12,7 @@ use Exception;
 /**
  * Password Widget
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -108,7 +108,8 @@ class TPassword extends TField implements AdiantiWidgetInterface
         {
             // make the field read-only
             $this->tag-> readonly = "1";
-            $this->tag->{'class'} = 'tfield_disabled'; // CSS
+            $this->tag->{'class'} .= ' tfield_disabled'; // CSS
+            $this->tag->{'tabindex'} = '-1';
         }
         
         // show the tag

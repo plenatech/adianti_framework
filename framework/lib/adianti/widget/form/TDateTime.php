@@ -1,6 +1,7 @@
 <?php
 namespace Adianti\Widget\Form;
 
+use Adianti\Core\AdiantiCoreTranslator;
 use Adianti\Widget\Form\AdiantiWidgetInterface;
 use Adianti\Widget\Base\TElement;
 use Adianti\Widget\Base\TScript;
@@ -11,7 +12,7 @@ use DateTime;
 /**
  * DateTimePicker Widget
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -94,7 +95,16 @@ class TDateTime extends TEntry implements AdiantiWidgetInterface
      */
     public static function convertToMask($value, $fromMask, $toMask)
     {
-        if ($value)
+        if (is_array($value)) // vector fields (field list)
+        {
+            foreach ($value as $key => $item)
+            {
+                $value[$key] = self::convertToMask($item, $fromMask, $toMask);
+            }
+            
+            return $value;
+        }
+        else if ($value)
         {
             $value = substr($value,0,strlen($fromMask));
             
@@ -172,24 +182,23 @@ class TDateTime extends TEntry implements AdiantiWidgetInterface
     public function show()
     {
         $js_mask = str_replace('yyyy', 'yy', $this->mask);
-        $language = strtolower(LANG);
+        $language = strtolower( AdiantiCoreTranslator::getLanguage() );
         $options = json_encode($this->options);
         
-        if (parent::getEditable())
+        $outer_size = 'undefined';
+        if (strstr($this->size, '%') !== FALSE)
         {
-            $outer_size = 'undefined';
-            if (strstr($this->size, '%') !== FALSE)
-            {
-                $outer_size = $this->size;
-                $this->size = '100%';
-            }
+            $outer_size = $this->size;
+            $this->size = '100%';
         }
         
         parent::show();
         
-        if (parent::getEditable())
+        TScript::create( "tdatetime_start( '#{$this->id}', '{$this->mask}', '{$language}', '{$outer_size}', '{$options}');");
+        
+        if (!parent::getEditable())
         {
-            TScript::create( "tdatetime_start( '#{$this->id}', '{$this->mask}', '{$language}', '{$outer_size}', '{$options}');");
+            TScript::create( " tdate_disable_field( '{$this->formName}', '{$this->name}' ); " );
         }
     }
 }

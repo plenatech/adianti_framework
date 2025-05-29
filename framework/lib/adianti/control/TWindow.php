@@ -3,11 +3,12 @@ namespace Adianti\Control;
 
 use Adianti\Control\TAction;
 use Adianti\Widget\Container\TJQueryDialog;
+use Adianti\Widget\Base\TScript;
 
 /**
  * Window Container (JQueryDialog wrapper)
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    control
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
@@ -51,6 +52,31 @@ class TWindow extends TPage
     }
     
     /**
+     * Remove padding
+     */
+    public function removePadding()
+    {
+        $this->setProperty('class', 'window_modal');
+    }
+    
+    /**
+     * Remove titlebar
+     */
+    public function removeTitleBar()
+    {
+        $this->setDialogClass('no-title');
+    }
+    
+    /**
+     * Set Dialog class
+     * @param $class Class name
+     */
+    public function setDialogClass($class)
+    {
+        $this->wrapper->setDialogClass($class);
+    }
+    
+    /**
      * Define the stack order (zIndex)
      * @param $order Stack order
      */
@@ -78,6 +104,14 @@ class TWindow extends TPage
     }
     
     /**
+     * Disable Escape
+     */
+    public function disableEscape()
+    {
+        $this->wrapper->disableEscape();
+    }
+    
+    /**
      * Disable scrolling
      */
     public function disableScrolling()
@@ -93,6 +127,16 @@ class TWindow extends TPage
     public function setSize($width, $height)
     {
         $this->wrapper->setSize($width, $height);
+    }
+    
+    /**
+     * Define the window's min width between percent and absolute
+     * @param  $percent width
+     * @param  $absolute width
+     */
+    public function setMinWidth($percent, $absolute)
+    {
+        $this->wrapper->setMinWidth($percent, $absolute);
     }
     
     /**
@@ -131,6 +175,22 @@ class TWindow extends TPage
     public function setCloseAction(TAction $action)
     {
         $this->wrapper->setCloseAction($action);
+    }
+    
+    /**
+     * Block UI
+     */
+    public static function blockUI($timeout = null)
+    {
+        TScript::create('tjquerydialog_block_ui()', true, $timeout);
+    }
+    
+    /**
+     * Unblock UI
+     */
+    public static function unBlockUI($timeout = null)
+    {
+        TScript::create('tjquerydialog_unblock_ui()', true, $timeout);
     }
     
     /**

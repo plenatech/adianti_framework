@@ -7,13 +7,15 @@ use Adianti\Widget\Base\TScript;
 use Adianti\Widget\Form\TField;
 use Adianti\Widget\Form\TButton;
 use Adianti\Core\AdiantiCoreTranslator;
+use Adianti\Util\AdiantiStringConversion;
+
 use Exception;
 use ReflectionClass;
 
 /**
  * Wrapper class to deal with forms
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -27,6 +29,7 @@ class TForm implements AdiantiFormInterface
     protected $children;
     protected $js_function;
     protected $element;
+    protected $silent_fields;
     static private $forms;
     
     /**
@@ -39,8 +42,17 @@ class TForm implements AdiantiFormInterface
         {
             $this->setName($name);
         }
-        $this->children = array();
+        $this->children = [];
+        $this->silent_fields = [];
         $this->element  = new TElement('form');
+    }
+    
+    /**
+     * Change tag name
+     */
+    public function setTagName($name)
+    {
+        $this->element->setName($name);
     }
     
     /**
@@ -69,6 +81,14 @@ class TForm implements AdiantiFormInterface
     }
     
     /**
+     * Silent field
+     */
+    public function silentField($name)
+    {
+        $this->silent_fields[] = $name;
+    }
+    
+    /**
      * Define a form property
      * @param $name  Property Name
      * @param $value Property Value
@@ -94,6 +114,14 @@ class TForm implements AdiantiFormInterface
                 $this->element->$name = $value;
             }
         }
+    }
+    
+    /**
+     * Unset form property
+     */
+    public function unsetProperty($name)
+    {
+        unset($this->element->$name);
     }
     
     /**
@@ -131,7 +159,7 @@ class TForm implements AdiantiFormInterface
      * @param $form_name  Form Name
      * @param $object     An Object containing the form data
      */
-    public static function sendData($form_name, $object, $aggregate = FALSE, $fireEvents = TRUE)
+    public static function sendData($form_name, $object, $aggregate = FALSE, $fireEvents = TRUE, $timeout = 0)
     {
         $fire_param = $fireEvents ? 'true' : 'false';
         // iterate the object properties
@@ -139,53 +167,25 @@ class TForm implements AdiantiFormInterface
         {
             foreach ($object as $field => $value)
             {
-                if (is_object($value))  // TMultiField
+                if (is_array($value))
                 {
-                    foreach ($value as $property=>$data)
-                    {
-                        // if inside ajax request, then utf8_encode if isn't utf8
-                        if (utf8_encode(utf8_decode($data)) !== $data )
-                        {
-                            $data = utf8_encode(addslashes($data));
-                        }
-                        else
-                        {
-                            $data = addslashes($data);
-                        }
-                        $data = str_replace(array("\n", "\r"), array( '\n', '\r'), $data );
-                        // send the property value to the form
-                        TScript::create( " tform_send_data('{$form_name}', '{$field}_{$property}', '$data', $fire_param); " );
-                    }
+                    $value = implode('|', $value);
+                }
+                
+                $value = addslashes($value);
+                $value = AdiantiStringConversion::assureUnicode($value);
+                
+                $value = str_replace(array("\n", "\r"), array( '\n', '\r'), $value );
+                
+                // send the property value to the form
+                if ($aggregate)
+                {
+                    TScript::create( " tform_send_data_aggregate('{$form_name}', '{$field}', '$value', $fire_param); " );
                 }
                 else
                 {
-                    if (is_array($value))
-                    {
-                        $value = implode('|', $value);
-                    }
-                    
-                    // if inside ajax request, then utf8_encode if isn't utf8
-                    if (utf8_encode(utf8_decode($value)) !== $value )
-                    {
-                        $value = utf8_encode(addslashes($value));
-                    }
-                    else
-                    {
-                        $value = addslashes($value);
-                    }
-                    
-                    $value = str_replace(array("\n", "\r"), array( '\n', '\r'), $value );
-                    
-                    // send the property value to the form
-                    if ($aggregate)
-                    {
-                        TScript::create( " tform_send_data_aggregate('{$form_name}', '{$field}', '$value', $fire_param); " );
-                    }
-                    else
-                    {
-                        TScript::create( " tform_send_data('{$form_name}', '{$field}', '$value', $fire_param); " );
-                        TScript::create( " tform_send_data_by_id('{$form_name}', '{$field}', '$value', $fire_param); " );
-                    }
+                    TScript::create( " tform_send_data('{$form_name}', '{$field}', '$value', $fire_param, '$timeout'); " );
+                    TScript::create( " tform_send_data_by_id('{$form_name}', '{$field}', '$value', $fire_param, '$timeout'); " );
                 }
             }
         }
@@ -212,40 +212,20 @@ class TForm implements AdiantiFormInterface
      */
     public function addField(AdiantiWidgetInterface $field)
     {
-        if ($field instanceof TField)
+        $name = $field->getName();
+        if (isset($this->fields[$name]) AND substr($name,-2) !== '[]')
         {
-            $name = $field->getName();
-            if (isset($this->fields[$name]) AND substr($name,-2) !== '[]')
-            {
-                throw new Exception(AdiantiCoreTranslator::translate('You have already added a field called "^1" inside the form', $name));
-            }
-            
-            if ($name)
-            {
-                $this->fields[$name] = $field;
-                $field->setFormName($this->name);
-                
-                if ($field instanceof TButton)
-                {
-                    $field->addFunction($this->js_function);
-                }
-            }
+            throw new Exception(AdiantiCoreTranslator::translate('You have already added a field called "^1" inside the form', $name));
         }
-        if ($field instanceof TMultiField)
+        
+        if ($name)
         {
-            $fieldid = $field->getId();
-            $this->js_function .= "multifields['$fieldid'].parseTableToJSON();";
+            $this->fields[$name] = $field;
+            $field->setFormName($this->name);
             
-            if ($this->fields)
+            if ($field instanceof TButton)
             {
-                // if the button was added before multifield
-                foreach ($this->fields as $field)
-                {
-                    if ($field instanceof TButton)
-                    {
-                        $field->addFunction($this->js_function);
-                    }
-                }
+                $field->addFunction($this->js_function);
             }
         }
     }
@@ -345,6 +325,8 @@ class TForm implements AdiantiFormInterface
         // iterate the form fields
         foreach ($this->fields as $name => $field)
         {
+            $name = str_replace(['[',']'], ['',''], $name);
+            
             if ($name) // labels don't have name
             {
                 if (isset($object->$name))
@@ -371,7 +353,7 @@ class TForm implements AdiantiFormInterface
         {
             $key = str_replace(['[',']'], ['',''], $key);
             
-            if (!$fieldObject instanceof TButton)
+            if (!$fieldObject instanceof TButton && !in_array($key, $this->silent_fields))
             {
                 $object->$key = $fieldObject->getPostData();
             }

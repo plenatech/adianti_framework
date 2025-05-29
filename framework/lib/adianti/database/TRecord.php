@@ -14,17 +14,19 @@ use Adianti\Database\TSqlDelete;
 use Math\Parser;
 use PDO;
 use Exception;
+use IteratorAggregate;
+use ArrayIterator;
 
 /**
  * Base class for Active Records
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    database
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
-abstract class TRecord
+abstract class TRecord implements IteratorAggregate
 {
     protected $data;  // array containing the data of the object
     protected $vdata; // array with virtual data (non-persistant properties)
@@ -60,6 +62,14 @@ abstract class TRecord
                 throw new Exception(AdiantiCoreTranslator::translate('Object ^1 not found in ^2', $id, constant(get_class($this).'::TABLENAME')));
             }
         }
+    }
+    
+    /**
+     * Returns iterator
+     */
+    public function getIterator ()
+    {
+        return new ArrayIterator( $this->data );
     }
     
     /**
@@ -107,6 +117,12 @@ abstract class TRecord
             {
                 throw new Exception(AdiantiCoreTranslator::translate('Method ^1 not found', $class_name.'::'.$method.'()'));
             }
+        }
+        else if (method_exists('TRepository', $method))
+        {
+            $class = get_called_class(); // get the Active Record class name
+            $repository = new TRepository( $class ); // create the repository
+            return call_user_func_array( array($repository, $method), $parameters );
         }
         else
         {
@@ -251,7 +267,7 @@ abstract class TRecord
      * Returns the name of database entity
      * @return A String containing the name of the entity
      */
-    protected function getEntity()
+    public function getEntity()
     {
         // get the Active Record class name
         $class = get_class($this);
@@ -269,6 +285,38 @@ abstract class TRecord
         $class = get_class($this);
         // returns the PRIMARY KEY Active Record class constant
         return constant("{$class}::PRIMARYKEY");
+    }
+    
+    /**
+     * Returns the the name of the created at column
+     * @return A String containing the created at column
+     */
+    public function getCreatedAtColumn()
+    {
+        // get the Active Record class name
+        $class = get_class($this);
+        
+        if (defined("{$class}::CREATEDAT"))
+        {
+            // returns the CREATEDAT Active Record class constant
+            return constant("{$class}::CREATEDAT");
+        }
+    }
+    
+    /**
+     * Returns the the name of the updated at column
+     * @return A String containing the updated at column
+     */
+    public function getUpdatedAtColumn()
+    {
+        // get the Active Record class name
+        $class = get_class($this);
+        
+        if (defined("{$class}::UPDATEDAT"))
+        {
+            // returns the UPDATEDAT Active Record class constant
+            return constant("{$class}::UPDATEDAT");
+        }
     }
     
     /**
@@ -332,19 +380,22 @@ abstract class TRecord
     
     /**
      * Return the Active Record properties as an indexed array
+     * @param $filter_attributes Array of attributes to be returned.
      * @return An indexed array containing the object properties
      */
-    public function toArray()
+    public function toArray( $filter_attributes = null )
     {
+        $attributes = $filter_attributes ? $filter_attributes : $this->attributes;
+        
         $data = array();
-        if (count($this->attributes) > 0)
+        if (count($attributes) > 0)
         {
             $pk = $this->getPrimaryKey();
             if (!empty($this->data))
             {
                 foreach ($this->data as $key => $value)
                 {
-                    if ((in_array($key, $this->attributes) AND is_string($key)) OR ($key === $pk))
+                    if ((in_array($key, $attributes) AND is_string($key)) OR ($key === $pk))
                     {
                         $data[$key] = $this->data[$key];
                     }
@@ -406,6 +457,18 @@ abstract class TRecord
         $content = str_replace('/', ' / ', $content);
         $content = str_replace('(', ' ( ', $content);
         $content = str_replace(')', ' ) ', $content);
+        
+        // fix sintax for operator followed by signal
+        foreach (['+', '-', '*', '/'] as $operator)
+        {
+            foreach (['+', '-'] as $signal)
+            {
+                $content = str_replace(" {$operator} {$signal} ", " {$operator} {$signal}", $content);
+                $content = str_replace(" {$operator}  {$signal} ", " {$operator} {$signal}", $content);
+                $content = str_replace(" {$operator}   {$signal} ", " {$operator} {$signal}", $content);
+            }
+        }
+        
         $parser = new Parser;
         $content = $parser->evaluate(substr($content,1));
         return $content;
@@ -440,8 +503,8 @@ abstract class TRecord
         if (count($this->attributes) > 0)
         {
             $attributes = $this->attributes;
-            $attributes[] = $this->getPrimaryKey();
-            return implode(',', $attributes);
+            array_unshift($attributes, $this->getPrimaryKey());
+            return implode(', ', array_unique($attributes));
         }
         
         return '*';
@@ -459,6 +522,8 @@ abstract class TRecord
         
         // check if the object has an ID or exists in the database
         $pk = $this->getPrimaryKey();
+        $createdat = $this->getCreatedAtColumn();
+        $updatedat = $this->getUpdatedAtColumn();
         
         if (method_exists($this, 'onBeforeStore'))
         {
@@ -475,6 +540,16 @@ abstract class TRecord
                 if ((defined("{$class}::IDPOLICY")) AND (constant("{$class}::IDPOLICY") == 'serial'))
                 {
                     unset($this->$pk);
+                }
+                else if ((defined("{$class}::IDPOLICY")) AND (constant("{$class}::IDPOLICY") == 'uuid'))
+                {
+                    $this->$pk = sprintf( '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+                                    mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff ),
+                                    mt_rand( 0, 0xffff ),
+                                    mt_rand( 0, 0x0fff ) | 0x4000,
+                                    mt_rand( 0, 0x3fff ) | 0x8000,
+                                    mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff )
+                                );
                 }
                 else
                 {
@@ -505,6 +580,13 @@ abstract class TRecord
                         $sql->setRowData($key, $this->data[$key]);
                     }
                 }
+            }
+            
+            if (!empty($createdat))
+            {
+                $info = TTransaction::getDatabaseInfo();
+                $date_mask = (in_array($info['type'], ['sqlsrv', 'dblib', 'mssql'])) ? 'Ymd H:i:s' : 'Y-m-d H:i:s';
+                $sql->setRowData($createdat, date($date_mask));
             }
         }
         else
@@ -541,7 +623,20 @@ abstract class TRecord
                     }
                 }
             }
+            
+            if (!empty($createdat))
+            {
+                $sql->unsetRowData($createdat);
+            }
+            
+            if (!empty($updatedat))
+            {
+                $info = TTransaction::getDatabaseInfo();
+                $date_mask = (in_array($info['type'], ['sqlsrv', 'dblib', 'mssql'])) ? 'Ymd H:i:s' : 'Y-m-d H:i:s';
+                $sql->setRowData($updatedat, date($date_mask));
+            }
         }
+        
         // get the connection of the active transaction
         if ($conn = TTransaction::get())
         {
@@ -979,8 +1074,11 @@ abstract class TRecord
     {
         $foreign_key = isset($foreign_key) ? $foreign_key : $this->underscoreFromCamelCase(get_class($this)) . '_id';
         $primary_key = $primary_key ? $primary_key : $this->getPrimaryKey();
+        
         $criteria = TCriteria::create( [$foreign_key => $this->$primary_key ], ['order' => $order] );
-        return new TRepository($composite_class);
+        $repository = new TRepository($composite_class);
+        $repository->setCriteria($criteria);
+        return $repository;
     }
     
     /**
@@ -1130,9 +1228,24 @@ abstract class TRecord
     /**
      * Returns all objects
      */
-    public static function all()
+    public static function all($indexed = false)
     {
-        return self::getObjects(NULL, FALSE);
+        $objects = self::getObjects(NULL, FALSE);
+        
+        if ($indexed)
+        {
+            $list = [];
+            foreach ($objects as $object)
+            {
+                $pk = $object->getPrimaryKey();
+                $list[ $object->$pk ] = $object;
+            }
+            return $list;
+        }
+        else
+        {
+            return $objects;
+        }
     }
     
     /**
@@ -1185,9 +1298,18 @@ abstract class TRecord
      */
     public static function select()
     {
-        $class = get_called_class(); // get the Active Record class name
-        $repository = new TRepository( $class ); // create the repository
+        $repository = new TRepository( get_called_class() ); // create the repository
         return $repository->select( func_get_args() );
+    }
+    
+    /**
+     * Creates a Repository with group
+     * @returns the TRepository object with a group
+     */
+    public static function groupBy($group)
+    {
+        $repository = new TRepository( get_called_class() ); // create the repository
+        return $repository->groupBy($group);
     }
     
     /**
@@ -1196,8 +1318,7 @@ abstract class TRecord
      */
     public static function where($variable, $operator, $value, $logicOperator = TExpression::AND_OPERATOR)
     {
-        $class = get_called_class(); // get the Active Record class name
-        $repository = new TRepository( $class ); // create the repository
+        $repository = new TRepository( get_called_class() ); // create the repository
         return $repository->where($variable, $operator, $value, $logicOperator);
     }
     
@@ -1207,8 +1328,7 @@ abstract class TRecord
      */
     public static function orWhere($variable, $operator, $value)
     {
-        $class = get_called_class(); // get the Active Record class name
-        $repository = new TRepository( $class ); // create the repository
+        $repository = new TRepository( get_called_class() ); // create the repository
         return $repository->orWhere($variable, $operator, $value);
     }
     
@@ -1220,9 +1340,28 @@ abstract class TRecord
      */
     public static function orderBy($order, $direction = 'asc')
     {
-        $class = get_called_class(); // get the Active Record class name
-        $repository = new TRepository( $class ); // create the repository
+        $repository = new TRepository( get_called_class() ); // create the repository
         return $repository->orderBy( $order, $direction );
+    }
+    
+    /**
+     * Creates a Repository with limit
+     * @returns the TRepository object
+     */
+    public static function take($limit)
+    {
+        $repository = new TRepository( get_called_class() ); // create the repository
+        return $repository->take($limit);
+    }
+    
+    /**
+     * Creates a Repository with offset
+     * @returns the TRepository object
+     */
+    public static function skip($offset)
+    {
+        $repository = new TRepository( get_called_class() ); // create the repository
+        return $repository->skip($offset);
     }
     
     private function underscoreFromCamelCase($string)

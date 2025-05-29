@@ -6,7 +6,7 @@ use Adianti\Widget\Base\TElement;
 /**
  * Alert
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage dialog
  * @author     Pablo Dall'Oglio

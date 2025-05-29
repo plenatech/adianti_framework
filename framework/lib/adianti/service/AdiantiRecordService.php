@@ -9,7 +9,7 @@ use Adianti\Database\TFilter;
 /**
  * Record rest service
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    service
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
@@ -32,7 +32,8 @@ class AdiantiRecordService
         $object = new $activeRecord($param['id'], FALSE);
         
         TTransaction::close();
-        return $object->toArray();
+        $attributes = defined('static::ATTRIBUTES') ? static::ATTRIBUTES : null;
+        return $object->toArray( $attributes );
     }
     
     /**
@@ -46,8 +47,8 @@ class AdiantiRecordService
         
         TTransaction::open($database);
         
-        $object = new $activeRecord;
-        $return = $object->delete($param['id']);
+        $object = new $activeRecord($param['id']);
+        $object->delete();
         
         TTransaction::close();
         return;
@@ -65,7 +66,9 @@ class AdiantiRecordService
         TTransaction::open($database);
         
         $object = new $activeRecord;
-        $object->fromArray($param['data']);
+        $pk = $object->getPrimaryKey();
+        $param['data'][$pk] = $param['data']['id'];
+        $object->fromArray( (array) $param['data']);
         $object->store();
         
         TTransaction::close();
@@ -111,13 +114,14 @@ class AdiantiRecordService
         
         $repository = new TRepository($activeRecord);
         $objects = $repository->load($criteria, FALSE);
+        $attributes = defined('static::ATTRIBUTES') ? static::ATTRIBUTES : null;
         
         $return = [];
         if ($objects)
         {
             foreach ($objects as $object)
             {
-                $return[] = $object->toArray();
+                $return[] = $object->toArray( $attributes );
             }
         }
         TTransaction::close();

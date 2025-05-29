@@ -1,10 +1,10 @@
 function tcombo_enable_field(form_name, field) {
     
     if(typeof form_name != 'undefined' && form_name != '') {
-        form_name = 'form[name="'+form_name+'"] ';
+        form_name_sel = 'form[name="'+form_name+'"] ';
     }
     else {
-        form_name = '';
+        form_name_sel = '';
     }
 
     var selector = '[name="'+field+'"]';
@@ -13,9 +13,14 @@ function tcombo_enable_field(form_name, field) {
     }
     
     try {
-        $(form_name + selector).attr('onclick', null);
-        $(form_name + selector).css('pointer-events',   'auto');
-        $(form_name + selector).removeClass('tcombo_disabled').addClass('tcombo');
+        if ($(form_name_sel + selector).attr('role') == 'tcombosearch') {
+            tmultisearch_enable_field(form_name, field);
+        }
+        else {
+            $(form_name_sel + selector).attr('onclick', null);
+            $(form_name_sel + selector).css('pointer-events',   'auto');
+            $(form_name_sel + selector).removeClass('tcombo_disabled');
+        }
     } catch (e) {
         console.log(e);
     }
@@ -24,10 +29,10 @@ function tcombo_enable_field(form_name, field) {
 function tcombo_disable_field(form_name, field) {
     
     if(typeof form_name != 'undefined' && form_name != '') {
-        form_name = 'form[name="'+form_name+'"] ';
+        form_name_sel = 'form[name="'+form_name+'"] ';
     }
     else {
-        form_name = '';
+        form_name_sel = '';
     }
 
     var selector = '[name="'+field+'"]';
@@ -36,10 +41,15 @@ function tcombo_disable_field(form_name, field) {
     }
     
     try {
-        $(form_name + selector).attr('onclick', 'return false');
-        $(form_name + selector).attr('tabindex', '-1');
-        $(form_name + selector).css('pointer-events', 'none');
-        $(form_name + selector).removeClass('tcombo').addClass('tcombo_disabled');
+        if ($(form_name_sel + selector).attr('role') == 'tcombosearch') {
+            tmultisearch_disable_field(form_name, field);
+        }
+        else {
+            $(form_name_sel + selector).attr('onclick', 'return false');
+            $(form_name_sel + selector).attr('tabindex', '-1');
+            $(form_name_sel + selector).css('pointer-events', 'none');
+            $(form_name_sel + selector).addClass('tcombo_disabled');
+        }
     } catch (e) {
         console.log(e);
     }
@@ -83,8 +93,7 @@ function tcombo_create_opt_group(form_name, field, label)
     }
     
     var selector = '[name="'+field+'"]';
-    
-    if ($('#'+field).length >0) {
+    if (field.indexOf('[') == -1 && $('#'+field).length >0) {
         var selector = '#'+field
     }
     
@@ -103,7 +112,13 @@ function tcombo_clear(form_name, field, fire_events)
     else {
         var form_name = '';
     }
-    var field = $(form_name+'[name="'+field+'"]');
+    
+    var selector = '[name="'+field+'"]';
+    if (field.indexOf('[') == -1 && $('#'+field).length >0) {
+        var selector = '#'+field
+    }
+    
+    var field = $(form_name + selector);
     
     if (field.attr('role') == 'tcombosearch') {
         if (field.find('option:not(:disabled)').length>0) {

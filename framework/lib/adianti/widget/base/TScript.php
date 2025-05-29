@@ -6,7 +6,7 @@ use Adianti\Widget\Base\TElement;
 /**
  * Base class for scripts
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage base
  * @author     Pablo Dall'Oglio
@@ -19,8 +19,13 @@ class TScript
      * Create a script
      * @param $code source code
      */
-    public static function create( $code, $show = TRUE )
+    public static function create( $code, $show = TRUE, $timeout = null )
     {
+        if ($timeout)
+        {
+            $code = "setTimeout( function() { $code }, $timeout )";
+        }
+        
         $script = new TElement('script');
         $script->{'language'} = 'JavaScript';
         $script->setUseSingleQuotes(TRUE);
@@ -31,5 +36,14 @@ class TScript
             $script->show();
         }
         return $script;
+    }
+    
+    /**
+     * Import script
+     * @param $script Script file name
+     */
+    public static function importFromFile( $script, $show = TRUE, $timeout = null )
+    {
+        TScript::create('$.getScript("'.$script.'");', $show, $timeout);
     }
 }

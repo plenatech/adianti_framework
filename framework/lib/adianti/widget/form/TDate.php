@@ -1,6 +1,7 @@
 <?php
 namespace Adianti\Widget\Form;
 
+use Adianti\Core\AdiantiCoreTranslator;
 use Adianti\Widget\Form\AdiantiWidgetInterface;
 use Adianti\Widget\Base\TElement;
 use Adianti\Widget\Base\TScript;
@@ -11,7 +12,7 @@ use DateTime;
 /**
  * DatePicker Widget
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage form
  * @author     Pablo Dall'Oglio
@@ -20,11 +21,12 @@ use DateTime;
  */
 class TDate extends TEntry implements AdiantiWidgetInterface
 {
-    private $mask;
-    private $dbmask;
+    protected $mask;
+    protected $dbmask;
     protected $id;
     protected $size;
     protected $options;
+    protected $value;
     protected $replaceOnPost;
     
     /**
@@ -46,6 +48,7 @@ class TDate extends TEntry implements AdiantiWidgetInterface
         $newmask = str_replace('yyyy', '9999', $newmask);
         parent::setMask($newmask);
         $this->tag->{'widget'} = 'tdate';
+        $this->tag->{'autocomplete'} = 'off';
     }
     
     /**
@@ -88,7 +91,16 @@ class TDate extends TEntry implements AdiantiWidgetInterface
      */
     public static function convertToMask($value, $fromMask, $toMask)
     {
-        if ($value)
+        if (is_array($value)) // vector fields (field list)
+        {
+            foreach ($value as $key => $item)
+            {
+                $value[$key] = self::convertToMask($item, $fromMask, $toMask);
+            }
+            
+            return $value;
+        }
+        else if ($value)
         {
             $value = substr($value,0,strlen($fromMask));
             
@@ -123,11 +135,27 @@ class TDate extends TEntry implements AdiantiWidgetInterface
     }
     
     /**
+     * Return mask
+     */
+    public function getMask()
+    {
+        return $this->mask;
+    }
+    
+    /**
      * Set the mask to be used to colect the data
      */
     public function setDatabaseMask($mask)
     {
         $this->dbmask = $mask;
+    }
+    
+    /**
+     * Return database mask
+     */
+    public function getDatabaseMask()
+    {
+        return $this->dbmask;
     }
     
     /**
@@ -196,24 +224,23 @@ class TDate extends TEntry implements AdiantiWidgetInterface
     public function show()
     {
         $js_mask = str_replace('yyyy', 'yy', $this->mask);
-        $language = strtolower(LANG);
+        $language = strtolower( AdiantiCoreTranslator::getLanguage() );
         $options = json_encode($this->options);
         
-        if (parent::getEditable())
+        $outer_size = 'undefined';
+        if (strstr($this->size, '%') !== FALSE)
         {
-            $outer_size = 'undefined';
-            if (strstr($this->size, '%') !== FALSE)
-            {
-                $outer_size = $this->size;
-                $this->size = '100%';
-            }
+            $outer_size = $this->size;
+            $this->size = '100%';
         }
         
         parent::show();
         
-        if (parent::getEditable())
+        TScript::create( "tdate_start( '#{$this->id}', '{$this->mask}', '{$language}', '{$outer_size}', '{$options}');");
+        
+        if (!parent::getEditable())
         {
-            TScript::create( "tdate_start( '#{$this->id}', '{$this->mask}', '{$language}', '{$outer_size}', '{$options}');");
+            TScript::create( " tdate_disable_field( '{$this->formName}', '{$this->name}' ); " );
         }
     }
 }

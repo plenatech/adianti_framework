@@ -1,3 +1,22 @@
+function tentry_new_mask(field, mask)
+{
+    $(document).ready(function(){
+        mask = mask.replace(/9/g, '0');
+        var length = $('#'+field).attr('maxlength') > 0 ? $('#'+field).attr('maxlength') : 250;
+        
+        if (mask == 'A!') {
+            mask = 'A'.repeat(length);
+        }
+        else if (mask == 'S!') {
+            mask = 'S'.repeat(length);
+        }
+        else if (mask == '0!') {
+            mask = '0'.repeat(length);
+        }
+        $('#'+field).mask(mask);
+    });
+}
+
 /**
  * TEntry Mask
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
@@ -11,7 +30,6 @@
  * @param event = Evento de disparo js
  * @param mask  = Mascara a ser aplicada
  */
- 
 function tentry_mask(field, event, mask)
 {
     var value, i, character, returnString,tamCampo,maskLength;
@@ -168,42 +186,89 @@ function tentry_lower(field)
     }
 }
 
-function tentry_autocomplete(field, options)
+function tentry_autocomplete(field, list, options)
 {
     var selecteds;
     var selector = 'input[name="'+field+'"]';
     if ($('#'+field).length >0) {
         var selector = '#'+field
     }
-    $(selector).autocomplete({lookup:options, onSelect: function() {
-        var oldv = $(this).data('val');
-        var newv = $(this).val();
-        $(this).data('val', newv);
-        $(selector).removeAttr('onblur');
-        if (oldv !== newv) {
-            if ($(selector).attr('exitaction')) {
-                string_callback=$(selector).attr('exitaction');
-                Function(string_callback)();
+    
+    var attributes = {
+        lookup: list,
+        onSelect: function() {
+            var oldv = $(this).data('val');
+            var newv = $(this).val();
+            $(this).data('val', newv);
+            $(selector).removeAttr('onblur');
+            if (oldv !== newv) {
+                if ($(selector).attr('exitaction')) {
+                    string_callback=$(selector).attr('exitaction');
+                    Function(string_callback)();
+                }
             }
         }
-    }} );
+    }
+    
+    options = Object.assign(attributes, JSON.parse( options) );
+    
+    $(selector).autocomplete(options);
+}
+
+function tentry_autocomplete_by_name(field, list, options)
+{
+	objectId = $('[name='+field+']').attr('id');
+	tentry_autocomplete(objectId, list, options)
 }
 
 function tentry_numeric_mask(field, decimals, decimal_sep, thousand_sep)
 {
     var selector = 'input[name="'+field+'"]';
+
     if ($('#'+field).length >0) {
-        var selector = '#'+field
+        var selector = '#'+field;
     }
-    
-    $(selector).iMask({
-            type : 'number',
-            decDigits   : decimals,
-            decSymbol   : decimal_sep,
-            groupSymbol : thousand_sep
+
+    $(selector).maskMoney({
+        prefix: '',
+        suffix: '',
+        affixesStay: true,
+        thousands: thousand_sep,
+        decimal: decimal_sep,
+        precision: decimals,
+        allowZero: false,
+        allowNegative: true,
+        formatOnBlur: false,
+        reverse: false,
+        selectAllOnFocus: false,
+        allowEmpty: false,
     });
+}
+
+function tentry_get_data_by_id(field_id)
+{
+    var nmask =$('#'+field_id).data('nmask');
     
-    if ($(selector).prop('readonly') == true) {
-        $(selector).off('keydown');
+    if (typeof nmask !== 'undefined')
+    {
+        var dec_sep = nmask.substring(1,2);
+        var tho_sep = nmask.substring(2,3);
+        var value   = $('#'+field_id).val();
+        value = value.split(tho_sep).join('');
+        value = value.split(dec_sep).join('.');
+        return value;
     }
+    else
+    {
+        return $('#'+field_id).val();
+    }
+}
+
+function tentry_exit_on_enter(field_id)
+{
+    $('#'+field_id).bind('keypress', function(e) {
+         if(e.keyCode == 13) {
+             document.getElementById(field_id).blur();
+         }
+    });
 }

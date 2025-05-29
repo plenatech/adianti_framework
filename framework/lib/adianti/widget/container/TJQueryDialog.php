@@ -4,11 +4,13 @@ namespace Adianti\Widget\Container;
 use Adianti\Control\TAction;
 use Adianti\Widget\Base\TElement;
 use Adianti\Widget\Base\TScript;
+use Adianti\Core\AdiantiCoreTranslator;
+use Exception;
 
 /**
  * JQuery dialog container
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage container
  * @author     Pablo Dall'Oglio
@@ -28,6 +30,8 @@ class TJQueryDialog extends TElement
     private $useOKButton;
     private $stackOrder;
     private $closeAction;
+    private $closeEscape;
+    private $dialogClass;
     
     /**
      * Class Constructor
@@ -43,8 +47,19 @@ class TJQueryDialog extends TElement
         $this->draggable = 'true';
         $this->resizable = 'true';
         $this->stackOrder = 2000;
+        $this->closeEscape = true;
+        $this->dialogClass = '';
+        
         $this->{'id'} = 'jquery_dialog_'.mt_rand(1000000000, 1999999999);
         $this->{'style'} = "overflow:auto";
+    }
+    
+    /**
+     * Disable close on escape
+     */
+    public function disableEscape()
+    {
+        $this->closeEscape = false;
     }
     
     /**
@@ -53,6 +68,15 @@ class TJQueryDialog extends TElement
     public function disableScrolling()
     {
         $this->{'style'} = "overflow: hidden";
+    }
+    
+    /**
+     * Set Dialog class
+     * @param $class Class name
+     */
+    public function setDialogClass($class)
+    {
+        $this->dialogClass = $class;
     }
     
     /**
@@ -144,6 +168,16 @@ class TJQueryDialog extends TElement
     }
     
     /**
+     * Define the window's min width between percent and absolute
+     * @param  $percent width
+     * @param  $absolute width
+     */
+    public function setMinWidth($percent, $absolute)
+    {
+        $this->width  = "Math.min(\$(window).width() * $percent, $absolute)";
+    }
+    
+    /**
      * Define the dialog position
      * @param $left left
      * @param $top top
@@ -201,7 +235,7 @@ class TJQueryDialog extends TElement
         $pos_string = '';
         $id = $this->{'id'};
         
-        $close_action = ''; // cannot be function, because it is tested inside tjquerydialog.js
+        $close_action = 'undefined'; // cannot be function, because it is tested inside tjquerydialog.js
         
         if (isset($this->closeAction))
         {
@@ -209,7 +243,8 @@ class TJQueryDialog extends TElement
             $close_action = "function() { __adianti_ajax_exec('{$string_action}') }";
         }
         
-        parent::add(TScript::create("tjquerydialog_start( '#{$id}', {$this->modal}, {$this->draggable}, {$this->resizable}, {$this->width}, {$this->height}, {$top}, {$left}, {$this->stackOrder}, { {$action_code} {$ok_button} }, $close_action ); ", FALSE));
+        $close_on_escape = $this->closeEscape ? 'true' : 'false';
+        parent::add(TScript::create("tjquerydialog_start( '#{$id}', {$this->modal}, {$this->draggable}, {$this->resizable}, {$this->width}, {$this->height}, {$top}, {$left}, {$this->stackOrder}, { {$action_code} {$ok_button} }, $close_action, $close_on_escape, '{$this->dialogClass}' ); ", FALSE));
         parent::show();
     }
     

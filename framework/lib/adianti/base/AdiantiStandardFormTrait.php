@@ -1,6 +1,7 @@
 <?php
 namespace Adianti\Base;
 
+use Adianti\Core\AdiantiCoreApplication;
 use Adianti\Core\AdiantiCoreTranslator;
 use Adianti\Widget\Dialog\TMessage;
 use Adianti\Database\TTransaction;
@@ -10,7 +11,7 @@ use Exception;
 /**
  * Standard Form Trait
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    base
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
@@ -18,7 +19,27 @@ use Exception;
  */
 trait AdiantiStandardFormTrait
 {
+    protected $afterSaveAction;
+    protected $useMessages;
+    
     use AdiantiStandardControlTrait;
+    
+    /**
+     * method setAfterSaveAction()
+     * Define after save action
+     */
+    public function setAfterSaveAction($action)
+    {
+        $this->afterSaveAction = $action;
+    }
+    
+    /**
+     * Define if will use messages after operations
+     */
+    public function setUseMessages($bool)
+    {
+        $this->useMessages = $bool;
+    }
     
     /**
      * method onSave()
@@ -57,7 +78,14 @@ trait AdiantiStandardFormTrait
             TTransaction::close();
             
             // shows the success message
-            new TMessage('info', AdiantiCoreTranslator::translate('Record saved'));
+            if (isset($this->useMessages) AND $this->useMessages === false)
+            {
+                AdiantiCoreApplication::loadPageURL( $this->afterSaveAction->serialize() );
+            }
+            else
+            {
+                new TMessage('info', AdiantiCoreTranslator::translate('Record saved'), $this->afterSaveAction);
+            }
             
             return $object;
         }
@@ -127,7 +155,7 @@ trait AdiantiStandardFormTrait
             }
             else
             {
-                $this->form->clear();
+                $this->form->clear( true );
             }
         }
         catch (Exception $e) // in case of exception

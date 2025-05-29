@@ -7,13 +7,13 @@ use Adianti\Database\TTransaction;
 /**
  * Provides an Interface to create UPDATE statements
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    database
  * @author     Pablo Dall'Oglio
  * @copyright  Copyright (c) 2006 Adianti Solutions Ltd. (http://www.adianti.com.br)
  * @license    http://www.adianti.com.br/framework-license
  */
-final class TSqlUpdate extends TSqlStatement
+class TSqlUpdate extends TSqlStatement
 {
     protected $sql;         // stores the SQL statement
     private $columnValues;
@@ -33,6 +33,18 @@ final class TSqlUpdate extends TSqlStatement
     }
     
     /**
+     * Unset row data
+     * @param $column   Name of the database column
+     */
+    public function unsetRowData($column)
+    {
+        if (isset($this->columnValues[$column]))
+        {
+            unset($this->columnValues[$column]);
+        }
+    }
+    
+    /**
      * Transform the value according to its PHP type
      * before send it to the database
      * @param $value    Value to be transformed
@@ -46,11 +58,13 @@ final class TSqlUpdate extends TSqlStatement
         {
             if (substr(strtoupper($value),0,7) == '(SELECT')
             {
+                $value  = str_replace(['#', '--', '/*'], ['', '', ''], $value);
                 $result = $value;
             }
             // if the value must not be escaped (NOESC in front)
             else if (substr($value,0,6) == 'NOESC:')
             {
+                $value  = str_replace(['#', '--', '/*'], ['', '', ''], $value);
                 $result = substr($value,6);
             }
             // if is a string

@@ -7,7 +7,7 @@ use Adianti\Control\TAction;
 /**
  * Action Link
  *
- * @version    5.5
+ * @version    7.2.2
  * @package    widget
  * @subpackage util
  * @author     Pablo Dall'Oglio
@@ -32,7 +32,7 @@ class TActionLink extends TTextDisplay
         }
         
         parent::__construct($value, $color, $size, $decoration);
-        parent::setName('a');
+        parent::setName('button');
         
         $this->{'href'} = $action->serialize();
         $this->{'generator'} = 'adianti';
