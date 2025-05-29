@@ -5,7 +5,15 @@ $ini = AdiantiApplicationConfig::get();
 $theme  = $ini['general']['theme'];
 new TSession;
 
-$content     = file_get_contents("app/templates/{$theme}/layout.html");
+if (isset($_REQUEST['template']) AND $_REQUEST['template'] == 'iframe')
+{
+	$content = file_get_contents("app/templates/{$theme}/iframe.html");
+}
+else
+{
+	$content  = file_get_contents("app/templates/{$theme}/layout.html");
+}
+
 $menu_string = AdiantiMenuBuilder::parse('menu.xml', $theme);
 $content     = ApplicationTranslator::translateTemplate($content);
 $content     = str_replace('{LIBRARIES}', file_get_contents("app/templates/{$theme}/libraries.html"), $content);
