@@ -13,4 +13,6 @@ Criado por Pablo Dall'Oglio adianti@adianti.com.br Home-page: http://www.adianti
 
 ## Repositório
 
-Este repositório armazena um histórico de versões do Adianti Framework, para que possam ser instalados por meio do composer, necessário e útil para o desenvolvimento de componentes que extendem o Framework em diferentes versões.
+⚠️ **Aviso**: Esta é uma redistribuição **não oficial** do Adianti Framework. Este repositório é mantido independentemente e **não é afiliado ou mantido** pelos criadores originais do Adianti Framework.
+
+Este repositório armazena um histórico de versões do Adianti Framework, para que possam ser instalados por meio do composer, necessário e útil para o desenvolvimento de componentes que estendem o Framework em diferentes versões.
