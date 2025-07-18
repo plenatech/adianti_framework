@@ -4,22 +4,22 @@
     <title>{title}</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <link rel="manifest" href="manifest.json?appver=810">
+    <link rel="manifest" href="manifest.json?appver=820">
     <link rel="shortcut icon" type="image/png" href="favicon.png"/>
     <!-- Tell the browser to be responsive to screen width -->
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
     <link rel="apple-touch-icon" sizes="180x180" href="app/images/icon.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     
     {LIBRARIES}
     {HEAD}
     
-    <script src="app/lib/include/admin.js?appver=810" type="text/javascript"></script>
-    <link href="app/lib/include/admin.css?appver=810" rel="stylesheet" type="text/css" media="screen">
+    <script src="app/lib/include/admin.js?appver=820" type="text/javascript"></script>
+    <link href="app/lib/include/admin.css?appver=820" rel="stylesheet" type="text/css" media="screen">
     
-    <script src="app/templates/{template}/js/theme.js?appver=810"></script>
-    <link rel="stylesheet" href="app/templates/{template}/theme.css?appver=810">
+    <script src="app/templates/{template}/js/theme.js?appver=820"></script>
+    <link rel="stylesheet" href="app/templates/{template}/theme.css?appver=820">
     <link rel="stylesheet" href="app/templates/{template}/custom.css?appver={buildid}">
     
     <script>
@@ -39,7 +39,7 @@
     <div class="wrapper">
         <aside id="sidebar" class="js-sidebar thin-scroll">
             <!-- Content For Sidebar -->
-            <div class="h-100">
+            <div class="h-100" id="menu-wrapper">
                 <span class="sidebar-system-name border-bottom">
                     <span class="sidebar-logo" style="margin-left: 0;">
                         <img style="width:75%;margin-top:-5px" src="favicon.png">
@@ -57,6 +57,7 @@
                     </div>
                 </span>
                 
+                <div id="search-box" style="margin-left:15px"></div>
                 {MENU}
                 
             </div>
@@ -74,14 +75,26 @@
                     </ul>
                 </div>
             </nav>
-            <main class="content px-3 py-2">
-                <div class="container-fluid">
+            
+            <ul id="adianti_tab_area" class="nav nav-underline" style="display:none">
+              <li class="nav-item">
+                <a class="nav-link active" aria-current="page" onclick="Template.goFirstPageTab()"> <i class="fa-solid fa-house"></i> <span>Home</span></a>
+              </li>
+            </ul>
+            
+            <main id="adianti_div_content_wrapper" class="content px-3 py-2">
+                <div class="container-fluid" style="padding-right:0">
                     <div id="adianti_div_content"></div>
                 </div>
                 
-                <div id="adianti_online_content"></div>
-                
                 <div id="adianti_right_panel" class="right-panel"></div>
+                <div id="adianti_online_content"></div>
+            </main>
+            
+            <main id="adianti_tab_content_wrapper">
+                <div class="container-fluid" style="padding-right:0">
+                    <div id="adianti_tab_content"></div>
+                </div>
             </main>
             
             <footer class="footer">
