@@ -15,6 +15,28 @@
     "autoload": {
         "psr-4": {
             "Adianti\\": "framework\\lib\\adianti"
-        }
+        },
+        "classmap": [
+            "framework/lib/adianti/base",
+            "framework/lib/adianti/control",
+            "framework/lib/adianti/core",
+            "framework/lib/adianti/database",
+            "framework/lib/adianti/http",
+            "framework/lib/adianti/log",
+            "framework/lib/adianti/registry",
+            "framework/lib/adianti/service",
+            "framework/lib/adianti/util",
+            "framework/lib/adianti/validator",
+            "framework/lib/adianti/widget/base",
+            "framework/lib/adianti/widget/container",
+            "framework/lib/adianti/widget/datagrid",
+            "framework/lib/adianti/widget/dialog",
+            "framework/lib/adianti/widget/form",
+            "framework/lib/adianti/widget/menu",
+            "framework/lib/adianti/widget/template",
+            "framework/lib/adianti/widget/util",
+            "framework/lib/adianti/widget/wrapper",
+            "framework/lib/adianti/wrapper"
+        ]
     }
 }
